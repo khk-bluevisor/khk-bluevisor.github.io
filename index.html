@@ -1,1 +1,334 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Install Referrer 샘플 링크 생성기</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f4f0;
+        --panel: #ffffff;
+        --text: #1b1b1f;
+        --muted: #5d5d6a;
+        --accent: #1a6b5e;
+        --border: #e1ded7;
+        --shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+      }
 
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        background: radial-gradient(circle at top, #fff9f0 0%, var(--bg) 45%, #efe9e1 100%);
+        color: var(--text);
+      }
+
+      main {
+        max-width: 920px;
+        margin: 32px auto 56px;
+        padding: 0 20px;
+      }
+
+      h1 {
+        font-size: 28px;
+        margin: 0 0 6px;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .panel {
+        background: var(--panel);
+        border-radius: 20px;
+        padding: 22px;
+        margin-top: 24px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+      }
+
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      input,
+      textarea,
+      select {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 14px;
+        background: #fff;
+      }
+
+      textarea {
+        min-height: 90px;
+        resize: vertical;
+      }
+
+      .radio-group {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        font-size: 14px;
+      }
+
+      .radio-group input {
+        width: auto;
+      }
+
+      .output {
+        margin-top: 18px;
+        padding: 16px;
+        border-radius: 12px;
+        background: #f9f7f3;
+        border: 1px dashed var(--border);
+      }
+
+      .output code {
+        display: block;
+        word-break: break-all;
+        font-size: 13px;
+        margin-top: 8px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      button {
+        border: none;
+        border-radius: 10px;
+        padding: 10px 14px;
+        background: var(--accent);
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: #dfe7e4;
+        color: #153d36;
+      }
+
+      .note {
+        margin-top: 16px;
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .warning {
+        margin-top: 12px;
+        font-size: 13px;
+        color: #8b3a3a;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Install Referrer 샘플 링크 생성기</h1>
+      <p>구글 플레이 설치 링크의 referrer 값을 손쉽게 구성해 테스트할 수 있는 간단한 도구입니다.</p>
+
+      <section class="panel">
+        <div class="grid">
+          <div>
+            <label for="appId">앱 패키지 이름</label>
+            <input id="appId" type="text" value="dev.sample.appddlink" />
+          </div>
+          <div>
+            <label for="mode">리퍼러 입력 방식</label>
+            <div class="radio-group">
+              <label><input type="radio" name="mode" value="auto" checked /> 자동 생성</label>
+              <label><input type="radio" name="mode" value="manual" /> 직접 입력</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid" id="autoFields">
+          <div>
+            <label for="utmSource">utm_source</label>
+            <input id="utmSource" type="text" value="play" />
+          </div>
+          <div>
+            <label for="utmMedium">utm_medium</label>
+            <input id="utmMedium" type="text" value="cpc" />
+          </div>
+          <div>
+            <label for="utmCampaign">utm_campaign</label>
+            <input id="utmCampaign" type="text" value="sample_campaign" />
+          </div>
+          <div>
+            <label for="utmContent">utm_content</label>
+            <input id="utmContent" type="text" value="" />
+          </div>
+          <div>
+            <label for="utmTerm">utm_term</label>
+            <input id="utmTerm" type="text" value="" />
+          </div>
+          <div>
+            <label for="customPairs">추가 key=value (줄바꿈 구분)</label>
+            <textarea id="customPairs" placeholder="ex) promo=welcome&#10;channel=blog"></textarea>
+          </div>
+        </div>
+
+        <div id="manualFields" style="display: none; margin-top: 16px;">
+          <label for="manualReferrer">리퍼러 문자열</label>
+          <textarea
+            id="manualReferrer"
+            placeholder="ex) utm_source=play&utm_medium=cpc&utm_campaign=sample_campaign"
+          ></textarea>
+        </div>
+
+        <div class="output">
+          <strong>생성된 referrer (원문)</strong>
+          <code id="rawReferrer">utm_source=play&utm_medium=cpc&utm_campaign=sample_campaign</code>
+        </div>
+        <div class="output">
+          <strong>URL 인코딩된 referrer</strong>
+          <code id="encodedReferrer"></code>
+        </div>
+        <div class="output">
+          <strong>Play 스토어 설치 링크</strong>
+          <code id="fullUrl"></code>
+        </div>
+
+        <div class="actions">
+          <button id="copyReferrer">referrer 복사</button>
+          <button id="copyUrl" class="secondary">설치 링크 복사</button>
+        </div>
+
+        <p class="note">
+          생성된 링크로 설치하면 앱 내 Install Referrer 조회 결과에 동일한 값이 표시됩니다.
+        </p>
+        <p class="warning">
+          디버그 설치나 APK 직접 설치에서는 Install Referrer 값이 제공되지 않습니다.
+        </p>
+      </section>
+    </main>
+
+    <script>
+      const appId = document.getElementById("appId");
+      const modeInputs = document.querySelectorAll("input[name='mode']");
+      const autoFields = document.getElementById("autoFields");
+      const manualFields = document.getElementById("manualFields");
+      const utmSource = document.getElementById("utmSource");
+      const utmMedium = document.getElementById("utmMedium");
+      const utmCampaign = document.getElementById("utmCampaign");
+      const utmContent = document.getElementById("utmContent");
+      const utmTerm = document.getElementById("utmTerm");
+      const customPairs = document.getElementById("customPairs");
+      const manualReferrer = document.getElementById("manualReferrer");
+      const rawReferrer = document.getElementById("rawReferrer");
+      const encodedReferrer = document.getElementById("encodedReferrer");
+      const fullUrl = document.getElementById("fullUrl");
+
+      function getMode() {
+        return [...modeInputs].find((input) => input.checked)?.value ?? "auto";
+      }
+
+      function buildReferrer() {
+        const mode = getMode();
+        if (mode === "manual") {
+          return manualReferrer.value.trim();
+        }
+
+        const params = [];
+        const addParam = (key, value) => {
+          if (value.trim() !== "") {
+            params.push(`${key}=${value.trim()}`);
+          }
+        };
+
+        addParam("utm_source", utmSource.value);
+        addParam("utm_medium", utmMedium.value);
+        addParam("utm_campaign", utmCampaign.value);
+        addParam("utm_content", utmContent.value);
+        addParam("utm_term", utmTerm.value);
+
+        customPairs.value
+          .split(/\n+/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .forEach((line) => params.push(line));
+
+        return params.join("&");
+      }
+
+      function updateOutputs() {
+        const referrerValue = buildReferrer();
+        rawReferrer.textContent = referrerValue || "(값 없음)";
+        const encoded = referrerValue ? encodeURIComponent(referrerValue) : "";
+        encodedReferrer.textContent = encoded || "(값 없음)";
+
+        const packageId = appId.value.trim();
+        if (packageId && encoded) {
+          fullUrl.textContent =
+            `https://play.google.com/store/apps/details?id=${packageId}&referrer=${encoded}`;
+        } else if (packageId) {
+          fullUrl.textContent =
+            `https://play.google.com/store/apps/details?id=${packageId}`;
+        } else {
+          fullUrl.textContent = "(앱 패키지 이름을 입력하세요)";
+        }
+      }
+
+      function copyText(text) {
+        if (!text || text.startsWith("(")) {
+          return;
+        }
+        navigator.clipboard.writeText(text).catch(() => {
+          alert("클립보드 복사가 실패했습니다.");
+        });
+      }
+
+      document.getElementById("copyReferrer").addEventListener("click", () => {
+        copyText(rawReferrer.textContent);
+      });
+
+      document.getElementById("copyUrl").addEventListener("click", () => {
+        copyText(fullUrl.textContent);
+      });
+
+      modeInputs.forEach((input) =>
+        input.addEventListener("change", () => {
+          const mode = getMode();
+          autoFields.style.display = mode === "auto" ? "grid" : "none";
+          manualFields.style.display = mode === "manual" ? "block" : "none";
+          updateOutputs();
+        })
+      );
+
+      [
+        appId,
+        utmSource,
+        utmMedium,
+        utmCampaign,
+        utmContent,
+        utmTerm,
+        customPairs,
+        manualReferrer
+      ].forEach((input) => input.addEventListener("input", updateOutputs));
+
+      updateOutputs();
+    </script>
+  </body>
+</html>
