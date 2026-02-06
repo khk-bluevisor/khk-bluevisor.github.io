@@ -107,6 +107,18 @@
         margin-top: 8px;
       }
 
+      .output a {
+        display: inline-block;
+        margin-top: 10px;
+        color: var(--accent);
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      .output a:hover {
+        text-decoration: underline;
+      }
+
       .actions {
         display: flex;
         flex-wrap: wrap;
@@ -209,6 +221,7 @@
         <div class="output">
           <strong>Play 스토어 설치 링크</strong>
           <code id="fullUrl"></code>
+          <a id="fullUrlLink" href="#" target="_blank" rel="noopener noreferrer">설치 링크 열기</a>
         </div>
 
         <div class="actions">
@@ -240,6 +253,7 @@
       const rawReferrer = document.getElementById("rawReferrer");
       const encodedReferrer = document.getElementById("encodedReferrer");
       const fullUrl = document.getElementById("fullUrl");
+      const fullUrlLink = document.getElementById("fullUrlLink");
 
       function getMode() {
         return [...modeInputs].find((input) => input.checked)?.value ?? "auto";
@@ -281,13 +295,22 @@
 
         const packageId = appId.value.trim();
         if (packageId && encoded) {
-          fullUrl.textContent =
-            `https://play.google.com/store/apps/details?id=${packageId}&referrer=${encoded}`;
+          const url = `https://play.google.com/store/apps/details?id=${packageId}&referrer=${encoded}`;
+          fullUrl.textContent = url;
+          fullUrlLink.href = url;
+          fullUrlLink.style.pointerEvents = "auto";
+          fullUrlLink.style.opacity = "1";
         } else if (packageId) {
-          fullUrl.textContent =
-            `https://play.google.com/store/apps/details?id=${packageId}`;
+          const url = `https://play.google.com/store/apps/details?id=${packageId}`;
+          fullUrl.textContent = url;
+          fullUrlLink.href = url;
+          fullUrlLink.style.pointerEvents = "auto";
+          fullUrlLink.style.opacity = "1";
         } else {
           fullUrl.textContent = "(앱 패키지 이름을 입력하세요)";
+          fullUrlLink.href = "#";
+          fullUrlLink.style.pointerEvents = "none";
+          fullUrlLink.style.opacity = "0.5";
         }
       }
 
