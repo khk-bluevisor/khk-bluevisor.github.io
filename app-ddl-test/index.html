@@ -159,6 +159,39 @@
         color: var(--muted);
         line-height: 1.65;
       }
+
+      .qr-wrap {
+        margin-top: 20px;
+      }
+
+      .qr-card {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .qr-image-box {
+        width: 170px;
+        height: 170px;
+        border-radius: 12px;
+        padding: 8px;
+        background: #ffffff;
+        border: 1px solid var(--border);
+      }
+
+      .qr-image {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .qr-link {
+        display: inline-block;
+        word-break: break-all;
+        font-size: 13px;
+        line-height: 1.5;
+        color: inherit;
+      }
     </style>
   </head>
   <body>
@@ -252,6 +285,69 @@
           </article>
         </div>
 
+        <div class="qr-wrap">
+          <hr class="section-divider" />
+          <h2 class="section-title">설치 링크 QR 코드 (referrer 포함)</h2>
+          <div class="grid">
+            <article class="card red qr-card">
+              <h2>RED 설치 QR</h2>
+              <p class="meta">파라미터: <code id="qr-params-red">text=red&number=1</code></p>
+              <div class="qr-image-box">
+                <img
+                  id="qr-image-red"
+                  class="qr-image"
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Ddev.sample.appddlink%26referrer%3Dtext%253Dred%2526number%253D1"
+                  alt="RED 설치 링크 QR 코드"
+                />
+              </div>
+              <a
+                id="qr-link-red"
+                class="qr-link"
+                href="https://play.google.com/store/apps/details?id=dev.sample.appddlink&referrer=text%3Dred%26number%3D1"
+                >https://play.google.com/store/apps/details?id=dev.sample.appddlink&referrer=text%3Dred%26number%3D1</a
+              >
+            </article>
+
+            <article class="card green qr-card">
+              <h2>GREEN 설치 QR</h2>
+              <p class="meta">파라미터: <code id="qr-params-green">text=green&number=1</code></p>
+              <div class="qr-image-box">
+                <img
+                  id="qr-image-green"
+                  class="qr-image"
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Ddev.sample.appddlink%26referrer%3Dtext%253Dgreen%2526number%253D1"
+                  alt="GREEN 설치 링크 QR 코드"
+                />
+              </div>
+              <a
+                id="qr-link-green"
+                class="qr-link"
+                href="https://play.google.com/store/apps/details?id=dev.sample.appddlink&referrer=text%3Dgreen%26number%3D1"
+                >https://play.google.com/store/apps/details?id=dev.sample.appddlink&referrer=text%3Dgreen%26number%3D1</a
+              >
+            </article>
+
+            <article class="card blue qr-card">
+              <h2>BLUE 설치 QR</h2>
+              <p class="meta">파라미터: <code id="qr-params-blue">text=blue&number=1</code></p>
+              <div class="qr-image-box">
+                <img
+                  id="qr-image-blue"
+                  class="qr-image"
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Ddev.sample.appddlink%26referrer%3Dtext%253Dblue%2526number%253D1"
+                  alt="BLUE 설치 링크 QR 코드"
+                />
+              </div>
+              <a
+                id="qr-link-blue"
+                class="qr-link"
+                href="https://play.google.com/store/apps/details?id=dev.sample.appddlink&referrer=text%3Dblue%26number%3D1"
+                >https://play.google.com/store/apps/details?id=dev.sample.appddlink&referrer=text%3Dblue%26number%3D1</a
+              >
+            </article>
+          </div>
+        </div>
+
         <p class="notice">
           앱이 설치되어 있고 앱링크 검증이 완료된 기기에서는 앱이 직접 열립니다. Intent 스킴
           링크는 동일 경로를 대상으로 하며, 앱 미설치 시 별도 리디렉션 없이
@@ -269,27 +365,37 @@
           linkId: "link-red",
           paramsId: "params-red",
           intentLinkId: "intent-link-red",
-          intentParamsId: "intent-params-red"
+          intentParamsId: "intent-params-red",
+          qrImageId: "qr-image-red",
+          qrLinkId: "qr-link-red",
+          qrParamsId: "qr-params-red"
         },
         {
           text: "green",
           linkId: "link-green",
           paramsId: "params-green",
           intentLinkId: "intent-link-green",
-          intentParamsId: "intent-params-green"
+          intentParamsId: "intent-params-green",
+          qrImageId: "qr-image-green",
+          qrLinkId: "qr-link-green",
+          qrParamsId: "qr-params-green"
         },
         {
           text: "blue",
           linkId: "link-blue",
           paramsId: "params-blue",
           intentLinkId: "intent-link-blue",
-          intentParamsId: "intent-params-blue"
+          intentParamsId: "intent-params-blue",
+          qrImageId: "qr-image-blue",
+          qrLinkId: "qr-link-blue",
+          qrParamsId: "qr-params-blue"
         }
       ];
       const appPackageName = "dev.sample.appddlink";
       const intentScheme = "https";
       const basePath = "/app-ddl-test";
       const playStoreBaseUrl = "https://play.google.com/store/apps/details";
+      const qrCodeBaseUrl = "https://api.qrserver.com/v1/create-qr-code/";
 
       function sanitizeNumber(value) {
         const parsed = Number.parseInt(value ?? "", 10);
@@ -301,7 +407,16 @@
 
       function updateLinks() {
         const numberValue = sanitizeNumber(numberSelect.value);
-        cards.forEach(({ text, linkId, paramsId, intentLinkId, intentParamsId }) => {
+        cards.forEach(({
+          text,
+          linkId,
+          paramsId,
+          intentLinkId,
+          intentParamsId,
+          qrImageId,
+          qrLinkId,
+          qrParamsId
+        }) => {
           const params = `text=${text}&number=${numberValue}`;
           const webPath = `${basePath}/${text}?${params}`;
           const referrerEncoded = encodeURIComponent(params);
@@ -316,6 +431,11 @@
           document.getElementById(paramsId).textContent = params;
           document.getElementById(intentLinkId).href = intentHref;
           document.getElementById(intentParamsId).textContent = params;
+          document.getElementById(qrParamsId).textContent = params;
+          document.getElementById(qrLinkId).href = playStoreUrl;
+          document.getElementById(qrLinkId).textContent = playStoreUrl;
+          document.getElementById(qrImageId).src =
+            `${qrCodeBaseUrl}?size=320x320&data=${encodeURIComponent(playStoreUrl)}`;
         });
       }
 
