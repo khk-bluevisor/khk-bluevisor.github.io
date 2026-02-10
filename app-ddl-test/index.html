@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>앱링크 + Deferred Deep Link 테스트</title>
+    <style>
+      :root {
+        --bg: #f6f7fb;
+        --panel: #ffffff;
+        --text: #121318;
+        --muted: #5a6072;
+        --border: #dde2ee;
+        --red: #bd2a2a;
+        --green: #18773f;
+        --blue: #1765a8;
+        --shadow: 0 14px 34px rgba(19, 23, 34, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: linear-gradient(180deg, #eef2ff 0%, var(--bg) 42%, #f3f6f9 100%);
+        color: var(--text);
+        font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      }
+
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 32px 20px 52px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 30px;
+      }
+
+      .subtitle {
+        margin-top: 10px;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .panel {
+        margin-top: 24px;
+        padding: 22px;
+        border-radius: 18px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #f7f9ff;
+      }
+
+      .controls label {
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .controls select {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 7px 10px;
+        font-size: 14px;
+        background: #ffffff;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        background: #fbfcff;
+      }
+
+      .card h2 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      }
+
+      .red h2 {
+        color: var(--red);
+      }
+
+      .green h2 {
+        color: var(--green);
+      }
+
+      .blue h2 {
+        color: var(--blue);
+      }
+
+      .meta {
+        margin: 4px 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .btn {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 700;
+        color: #ffffff;
+      }
+
+      .red .btn {
+        background: var(--red);
+      }
+
+      .green .btn {
+        background: var(--green);
+      }
+
+      .blue .btn {
+        background: var(--blue);
+      }
+
+      code {
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 13px;
+      }
+
+      .notice {
+        margin-top: 16px;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>앱링크 + Deferred Deep Link 테스트</h1>
+      <p class="subtitle">
+        아래 링크는 각각 <code>/app-ddl-test/red</code>, <code>/app-ddl-test/green</code>,
+        <code>/app-ddl-test/blue</code> 경로의 앱링크를 호출합니다.
+      </p>
+
+      <section class="panel">
+        <div class="controls">
+          <label for="numberSelect">전달할 숫자(number)</label>
+          <select id="numberSelect">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+          </select>
+        </div>
+
+        <div class="grid">
+          <article class="card red">
+            <h2>RED 링크</h2>
+            <p class="meta">경로: <code>/app-ddl-test/red</code></p>
+            <p class="meta">파라미터: <code id="params-red">text=red&number=1</code></p>
+            <a id="link-red" class="btn" href="/app-ddl-test/red?text=red&amp;number=1">RED 링크 열기</a>
+          </article>
+
+          <article class="card green">
+            <h2>GREEN 링크</h2>
+            <p class="meta">경로: <code>/app-ddl-test/green</code></p>
+            <p class="meta">파라미터: <code id="params-green">text=green&number=1</code></p>
+            <a id="link-green" class="btn" href="/app-ddl-test/green?text=green&amp;number=1">GREEN 링크 열기</a>
+          </article>
+
+          <article class="card blue">
+            <h2>BLUE 링크</h2>
+            <p class="meta">경로: <code>/app-ddl-test/blue</code></p>
+            <p class="meta">파라미터: <code id="params-blue">text=blue&number=1</code></p>
+            <a id="link-blue" class="btn" href="/app-ddl-test/blue?text=blue&amp;number=1">BLUE 링크 열기</a>
+          </article>
+        </div>
+
+        <p class="notice">
+          앱이 설치되어 있고 앱링크 검증이 완료된 기기에서는 앱이 직접 열립니다.
+          앱이 없거나 브라우저에 머무르면 각 경로 페이지가 동일 파라미터를 Play referrer로 넘겨
+          <code>https://play.google.com/store/apps/details?id=dev.sample.appddlink</code>로 리디렉션합니다.
+        </p>
+      </section>
+    </main>
+
+    <script>
+      const numberSelect = document.getElementById("numberSelect");
+      const cards = [
+        { text: "red", linkId: "link-red", paramsId: "params-red" },
+        { text: "green", linkId: "link-green", paramsId: "params-green" },
+        { text: "blue", linkId: "link-blue", paramsId: "params-blue" }
+      ];
+
+      function sanitizeNumber(value) {
+        const parsed = Number.parseInt(value ?? "", 10);
+        if (Number.isNaN(parsed) || parsed < 1 || parsed > 10) {
+          return 1;
+        }
+        return parsed;
+      }
+
+      function updateLinks() {
+        const numberValue = sanitizeNumber(numberSelect.value);
+        cards.forEach(({ text, linkId, paramsId }) => {
+          const params = `text=${text}&number=${numberValue}`;
+          const href = `/app-ddl-test/${text}?${params}`;
+
+          document.getElementById(linkId).href = href;
+          document.getElementById(paramsId).textContent = params;
+        });
+      }
+
+      const initParams = new URLSearchParams(window.location.search);
+      numberSelect.value = String(sanitizeNumber(initParams.get("number")));
+
+      numberSelect.addEventListener("change", updateLinks);
+      updateLinks();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Green 경로 리디렉션</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 28px 20px;
+        font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        background: linear-gradient(180deg, #eefdf2 0%, #f7fff9 100%);
+        color: #1a1d24;
+      }
+
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 1px solid #d4ecd7;
+        border-radius: 16px;
+        padding: 22px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        color: #1e7a3f;
+      }
+
+      p {
+        margin: 10px 0 0;
+        line-height: 1.6;
+      }
+
+      code {
+        display: block;
+        margin-top: 10px;
+        padding: 12px;
+        border-radius: 10px;
+        background: #f1f8f2;
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 13px;
+        word-break: break-all;
+      }
+
+      a {
+        display: inline-block;
+        margin-top: 14px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        text-decoration: none;
+        background: #1e7a3f;
+        color: #ffffff;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>/app-ddl-test/green 리디렉션 페이지</h1>
+      <p>앱링크 파라미터를 설치 리퍼러로 전달한 뒤 구글 플레이로 이동합니다.</p>
+      <p id="referrerText"></p>
+      <code id="playUrl"></code>
+      <a id="manualLink" href="#">구글 플레이로 바로 이동</a>
+    </main>
+
+    <script>
+      const defaults = { text: "green", number: "1" };
+      const query = new URLSearchParams(window.location.search);
+      const textValue = query.get("text") || defaults.text;
+
+      function sanitizeNumber(value) {
+        const parsed = Number.parseInt(value ?? "", 10);
+        if (Number.isNaN(parsed) || parsed < 1 || parsed > 10) {
+          return defaults.number;
+        }
+        return String(parsed);
+      }
+
+      const numberValue = sanitizeNumber(query.get("number") || defaults.number);
+      const referrerRaw = `text=${textValue}&number=${numberValue}`;
+      const playUrl =
+        `https://play.google.com/store/apps/details?id=dev.sample.appddlink&referrer=${encodeURIComponent(referrerRaw)}`;
+
+      document.getElementById("referrerText").textContent = `전달되는 referrer: ${referrerRaw}`;
+      document.getElementById("playUrl").textContent = playUrl;
+      document.getElementById("manualLink").href = playUrl;
+
+      setTimeout(() => {
+        window.location.replace(playUrl);
+      }, 700);
+    </script>
+  </body>
+</html>
