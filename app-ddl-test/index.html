@@ -254,9 +254,9 @@
 
         <p class="notice">
           앱이 설치되어 있고 앱링크 검증이 완료된 기기에서는 앱이 직접 열립니다. Intent 스킴
-          링크는 동일 경로를 대상으로 하며, 앱 미설치 시 동일 URL로 브라우저 fallback을 수행합니다.
-          앱이 없거나 브라우저에 머무르면 각 경로 페이지가 동일 파라미터를 Play referrer로 넘겨
-          <code>https://play.google.com/store/apps/details?id=dev.sample.appddlink</code>로 리디렉션합니다.
+          링크는 동일 경로를 대상으로 하며, 앱 미설치 시 별도 리디렉션 없이
+          <code>https://play.google.com/store/apps/details?id=dev.sample.appddlink</code> 경로로
+          referrer 파라미터를 포함해 바로 이동합니다.
         </p>
       </section>
     </main>
@@ -289,6 +289,7 @@
       const appPackageName = "dev.sample.appddlink";
       const intentScheme = "https";
       const basePath = "/app-ddl-test";
+      const playStoreBaseUrl = "https://play.google.com/store/apps/details";
 
       function sanitizeNumber(value) {
         const parsed = Number.parseInt(value ?? "", 10);
@@ -303,11 +304,13 @@
         cards.forEach(({ text, linkId, paramsId, intentLinkId, intentParamsId }) => {
           const params = `text=${text}&number=${numberValue}`;
           const webPath = `${basePath}/${text}?${params}`;
-          const webAbsoluteUrl = `${window.location.origin}${webPath}`;
+          const referrerEncoded = encodeURIComponent(params);
+          const playStoreUrl =
+            `${playStoreBaseUrl}?id=${appPackageName}&referrer=${referrerEncoded}`;
           const intentHref =
             `intent://${window.location.host}${basePath}/${text}?${params}` +
             `#Intent;scheme=${intentScheme};package=${appPackageName};` +
-            `S.browser_fallback_url=${encodeURIComponent(webAbsoluteUrl)};end`;
+            `S.browser_fallback_url=${encodeURIComponent(playStoreUrl)};end`;
 
           document.getElementById(linkId).href = webPath;
           document.getElementById(paramsId).textContent = params;
