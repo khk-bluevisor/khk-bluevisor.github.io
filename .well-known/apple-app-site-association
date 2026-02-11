@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "DQALHSS7F2.kr.bluevisor.dev.app-ddl-test",
+        "paths": [ "/product/*" ]
+      }
+    ]
+  }
+}
