@@ -4,7 +4,11 @@
     "details": [
       {
         "appID": "DQALHSS7F2.kr.bluevisor.dev.app-ddl-test",
-        "paths": [ "/app-ddl-test/*" ]
+        "paths": [
+          "NOT /app-ddl-test",
+          "NOT /app-ddl-test/",
+          "/app-ddl-test/*"
+    	]
       }
     ]
   }
