@@ -3,12 +3,13 @@
     "apps": [],
     "details": [
       {
-        "appID": "DQALHSS7F2.kr.bluevisor.dev.app-ddl-test",
-        "paths": [
-          "NOT /app-ddl-test",
-          "NOT /app-ddl-test/",
-          "/app-ddl-test/*"
-    	]
+        "appIDs": ["DQALHSS7F2.kr.bluevisor.dev.app-ddl-test"],
+        "components": [
+          { "/": "/app-ddl-test", "exclude": true, "comment": "exclude root no-slash" },
+          { "/": "/app-ddl-test/", "exclude": true, "comment": "exclude root with slash" },
+          { "/": "/app-ddl-test/index.html", "exclude": true, "comment": "exclude index doc" },
+          { "/": "/app-ddl-test/*", "comment": "allow only subpaths" }
+        ]
       }
     ]
   }
