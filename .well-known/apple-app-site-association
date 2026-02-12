@@ -5,10 +5,10 @@
       {
         "appIDs": ["DQALHSS7F2.kr.bluevisor.dev.app-ddl-test"],
         "components": [
-          { "/": "/app-ddl-test", "exclude": true, "comment": "exclude no-slash root" },
-          { "/": "/app-ddl-test/", "exclude": true, "comment": "exclude slash root" },
-          { "/": "/app-ddl-test/index.html", "exclude": true, "comment": "exclude index file" },
-          { "/": "/app-ddl-test/?*", "comment": "allow only subpaths with at least one character" }
+          {
+            "/": "/app-ddl-test/link/*",
+            "comment": "allow only /app-ddl-test/link subpaths"
+          }
         ]
       }
     ]

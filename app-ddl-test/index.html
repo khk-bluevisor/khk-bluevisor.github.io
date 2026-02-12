@@ -198,8 +198,9 @@
     <main>
       <h1>앱링크 + Deferred Deep Link 테스트</h1>
       <p class="subtitle">
-        아래 링크는 각각 <code>/app-ddl-test/red</code>, <code>/app-ddl-test/green</code>,
-        <code>/app-ddl-test/blue</code> 경로의 앱링크를 호출합니다. 아래에는 동일 동작의
+        아래 링크는 각각 <code>/app-ddl-test/link/red</code>,
+        <code>/app-ddl-test/link/green</code>, <code>/app-ddl-test/link/blue</code> 경로의
+        앱링크를 호출합니다. 아래에는 동일 동작의
         <code>intent://</code> 스킴 버전도 함께 제공합니다.
       </p>
 
@@ -224,23 +225,23 @@
         <div class="grid">
           <article class="card red">
             <h2>RED 링크</h2>
-            <p class="meta">경로: <code>/app-ddl-test/red</code></p>
+            <p class="meta">경로: <code>/app-ddl-test/link/red</code></p>
             <p class="meta">파라미터: <code id="params-red">text=red&number=1</code></p>
-            <a id="link-red" class="btn" href="/app-ddl-test/red?text=red&amp;number=1">RED 링크 열기</a>
+            <a id="link-red" class="btn" href="/app-ddl-test/link/red?text=red&amp;number=1">RED 링크 열기</a>
           </article>
 
           <article class="card green">
             <h2>GREEN 링크</h2>
-            <p class="meta">경로: <code>/app-ddl-test/green</code></p>
+            <p class="meta">경로: <code>/app-ddl-test/link/green</code></p>
             <p class="meta">파라미터: <code id="params-green">text=green&number=1</code></p>
-            <a id="link-green" class="btn" href="/app-ddl-test/green?text=green&amp;number=1">GREEN 링크 열기</a>
+            <a id="link-green" class="btn" href="/app-ddl-test/link/green?text=green&amp;number=1">GREEN 링크 열기</a>
           </article>
 
           <article class="card blue">
             <h2>BLUE 링크</h2>
-            <p class="meta">경로: <code>/app-ddl-test/blue</code></p>
+            <p class="meta">경로: <code>/app-ddl-test/link/blue</code></p>
             <p class="meta">파라미터: <code id="params-blue">text=blue&number=1</code></p>
-            <a id="link-blue" class="btn" href="/app-ddl-test/blue?text=blue&amp;number=1">BLUE 링크 열기</a>
+            <a id="link-blue" class="btn" href="/app-ddl-test/link/blue?text=blue&amp;number=1">BLUE 링크 열기</a>
           </article>
         </div>
 
@@ -250,36 +251,36 @@
         <div class="grid">
           <article class="card red">
             <h2>RED Intent 링크</h2>
-            <p class="meta">경로: <code>/app-ddl-test/red</code></p>
+            <p class="meta">경로: <code>/app-ddl-test/link/red</code></p>
             <p class="meta">파라미터: <code id="intent-params-red">text=red&number=1</code></p>
             <a
               id="intent-link-red"
               class="btn"
-              href="intent://khk-bluevisor.github.io/app-ddl-test/red?text=red&amp;number=1#Intent;scheme=https;package=dev.sample.appddlink;end"
+              href="intent://khk-bluevisor.github.io/app-ddl-test/link/red?text=red&amp;number=1#Intent;scheme=https;package=dev.sample.appddlink;end"
               >RED Intent 열기</a
             >
           </article>
 
           <article class="card green">
             <h2>GREEN Intent 링크</h2>
-            <p class="meta">경로: <code>/app-ddl-test/green</code></p>
+            <p class="meta">경로: <code>/app-ddl-test/link/green</code></p>
             <p class="meta">파라미터: <code id="intent-params-green">text=green&number=1</code></p>
             <a
               id="intent-link-green"
               class="btn"
-              href="intent://khk-bluevisor.github.io/app-ddl-test/green?text=green&amp;number=1#Intent;scheme=https;package=dev.sample.appddlink;end"
+              href="intent://khk-bluevisor.github.io/app-ddl-test/link/green?text=green&amp;number=1#Intent;scheme=https;package=dev.sample.appddlink;end"
               >GREEN Intent 열기</a
             >
           </article>
 
           <article class="card blue">
             <h2>BLUE Intent 링크</h2>
-            <p class="meta">경로: <code>/app-ddl-test/blue</code></p>
+            <p class="meta">경로: <code>/app-ddl-test/link/blue</code></p>
             <p class="meta">파라미터: <code id="intent-params-blue">text=blue&number=1</code></p>
             <a
               id="intent-link-blue"
               class="btn"
-              href="intent://khk-bluevisor.github.io/app-ddl-test/blue?text=blue&amp;number=1#Intent;scheme=https;package=dev.sample.appddlink;end"
+              href="intent://khk-bluevisor.github.io/app-ddl-test/link/blue?text=blue&amp;number=1#Intent;scheme=https;package=dev.sample.appddlink;end"
               >BLUE Intent 열기</a
             >
           </article>
@@ -393,7 +394,7 @@
       ];
       const appPackageName = "dev.sample.appddlink";
       const intentScheme = "https";
-      const basePath = "/app-ddl-test";
+      const basePath = "/app-ddl-test/link";
       const playStoreBaseUrl = "https://play.google.com/store/apps/details";
       const qrCodeBaseUrl = "https://api.qrserver.com/v1/create-qr-code/";
 
