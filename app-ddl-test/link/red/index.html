@@ -72,38 +72,40 @@
       <a id="manualLink" href="#">구글 플레이로 바로 이동</a>
     </main>
 
-    <script>
+    <script type="module">
+      import {
+        extractBusinessParams,
+        isIOSBrowser,
+        saveWebToIosCandidate
+      } from "../common/web-to-ios-firestore.js";
+
       const defaults = { text: "red", number: "1" };
-      const query = new URLSearchParams(window.location.search);
-      const textValue = query.get("text") || defaults.text;
-
-      function sanitizeNumber(value) {
-        const parsed = Number.parseInt(value ?? "", 10);
-        if (Number.isNaN(parsed) || parsed < 1 || parsed > 10) {
-          return defaults.number;
-        }
-        return String(parsed);
-      }
-
-      const numberValue = sanitizeNumber(query.get("number") || defaults.number);
-      const referrerRaw = `text=${textValue}&number=${numberValue}`;
+      const businessParams = extractBusinessParams(defaults);
       const playUrl =
-        `https://play.google.com/store/apps/details?id=dev.sample.appddlink&referrer=${encodeURIComponent(referrerRaw)}`;
+        `https://play.google.com/store/apps/details?id=dev.sample.appddlink&referrer=${encodeURIComponent(businessParams.referrerRaw)}`;
 
-      document.getElementById("referrerText").textContent = `전달되는 referrer: ${referrerRaw}`;
+      const platformNotice = document.getElementById("platformNotice");
+      document.getElementById("referrerText").textContent = `전달되는 referrer: ${businessParams.referrerRaw}`;
       document.getElementById("playUrl").textContent = playUrl;
       document.getElementById("manualLink").href = playUrl;
 
-      function isIOSBrowser() {
-        const ua = navigator.userAgent || "";
-        const isAppleMobile = /iPhone|iPad|iPod/i.test(ua);
-        const isIPadDesktopUA = /Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1;
-        return isAppleMobile || isIPadDesktopUA;
-      }
-
-      const platformNotice = document.getElementById("platformNotice");
       if (isIOSBrowser()) {
-        platformNotice.textContent = "iOS 브라우저에서는 자동 리디렉션을 수행하지 않습니다. 아래 링크를 직접 눌러 이동하세요.";
+        platformNotice.textContent =
+          "iOS 브라우저입니다. 사용자 유추 데이터를 수집해 Firestore에 저장한 뒤 아래 링크를 눌러 이동하세요.";
+
+        saveWebToIosCandidate({
+          linkColor: defaults.text,
+          businessParams
+        })
+          .then(({ docId }) => {
+            platformNotice.textContent =
+              `iOS 브라우저입니다. Firestore 저장 완료(docId: ${docId}). 아래 링크를 눌러 이동하세요.`;
+          })
+          .catch((error) => {
+            console.error("[web-to-ios] red save failed:", error);
+            platformNotice.textContent =
+              "iOS 브라우저입니다. Firestore 저장에 실패했지만 아래 링크를 눌러 이동할 수 있습니다.";
+          });
       } else {
         platformNotice.textContent = "잠시 후 구글 플레이로 자동 이동합니다.";
         setTimeout(() => {
