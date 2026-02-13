@@ -60,6 +60,37 @@
         color: #ffffff;
         font-weight: 700;
       }
+
+      .ios-data-panel {
+        margin-top: 16px;
+        padding: 14px;
+        border-radius: 12px;
+        border: 1px solid #efd4d4;
+        background: #fff8f8;
+      }
+
+      .ios-data-panel h2 {
+        margin: 0;
+        font-size: 17px;
+      }
+
+      .ios-data-panel p {
+        margin-top: 8px;
+      }
+
+      .ios-data-panel pre {
+        margin: 10px 0 0;
+        max-height: 360px;
+        overflow: auto;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid #efd4d4;
+        background: #fffefe;
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 12px;
+        line-height: 1.55;
+        word-break: break-all;
+      }
     </style>
   </head>
   <body>
@@ -70,11 +101,21 @@
       <p id="referrerText"></p>
       <code id="playUrl"></code>
       <a id="manualLink" href="#">구글 플레이로 바로 이동</a>
+
+      <section id="iosDataPanel" class="ios-data-panel" hidden>
+        <h2>iOS 수집/저장 데이터</h2>
+        <p id="iosDataSummary"></p>
+        <p id="iosDataDocId"></p>
+        <pre id="iosDataJson">수집 대기 중...</pre>
+      </section>
     </main>
 
     <script type="module">
       import {
+        extractPayloadFromSaveError,
         extractBusinessParams,
+        formatPayloadForDisplay,
+        getErrorMessage,
         isIOSBrowser,
         saveWebToIosCandidate
       } from "../common/web-to-ios-firestore.js";
@@ -85,28 +126,58 @@
         `https://play.google.com/store/apps/details?id=dev.sample.appddlink&referrer=${encodeURIComponent(businessParams.referrerRaw)}`;
 
       const platformNotice = document.getElementById("platformNotice");
+      const iosDataPanel = document.getElementById("iosDataPanel");
+      const iosDataSummary = document.getElementById("iosDataSummary");
+      const iosDataDocId = document.getElementById("iosDataDocId");
+      const iosDataJson = document.getElementById("iosDataJson");
       document.getElementById("referrerText").textContent = `전달되는 referrer: ${businessParams.referrerRaw}`;
       document.getElementById("playUrl").textContent = playUrl;
       document.getElementById("manualLink").href = playUrl;
 
+      function renderIosPayload(payload) {
+        iosDataJson.textContent = JSON.stringify(payload, null, 2);
+      }
+
       if (isIOSBrowser()) {
+        iosDataPanel.hidden = false;
         platformNotice.textContent =
-          "iOS 브라우저입니다. 사용자 유추 데이터를 수집해 Firestore에 저장한 뒤 아래 링크를 눌러 이동하세요.";
+          "iOS 브라우저입니다. 자동 리디렉션하지 않으며, 아래에 사용자 유추/저장 데이터를 표시합니다.";
+        iosDataSummary.textContent = "Firestore 저장 시도 중...";
+        iosDataDocId.textContent = "docId: (저장 중)";
+        iosDataJson.textContent = "데이터 수집 중...";
 
         saveWebToIosCandidate({
           linkColor: defaults.text,
           businessParams
         })
-          .then(({ docId }) => {
+          .then(({ docId, payloadForDisplay }) => {
+            const payload = formatPayloadForDisplay(payloadForDisplay, docId);
             platformNotice.textContent =
-              `iOS 브라우저입니다. Firestore 저장 완료(docId: ${docId}). 아래 링크를 눌러 이동하세요.`;
+              `iOS 브라우저입니다. Firestore 저장 완료(docId: ${docId}).`;
+            iosDataSummary.textContent = "Firestore 저장 성공";
+            iosDataDocId.textContent = `docId: ${docId}`;
+            renderIosPayload(payload);
           })
           .catch((error) => {
             console.error("[web-to-ios] red save failed:", error);
+            const payload = extractPayloadFromSaveError(error);
+            const message = getErrorMessage(error);
             platformNotice.textContent =
-              "iOS 브라우저입니다. Firestore 저장에 실패했지만 아래 링크를 눌러 이동할 수 있습니다.";
+              "iOS 브라우저입니다. Firestore 저장에 실패했습니다.";
+            iosDataSummary.textContent = `Firestore 저장 실패: ${message}`;
+            iosDataDocId.textContent = "docId: (없음)";
+            if (payload) {
+              renderIosPayload(formatPayloadForDisplay(payload));
+            } else {
+              iosDataJson.textContent = JSON.stringify(
+                { error: "Firestore 저장 실패", message },
+                null,
+                2
+              );
+            }
           });
       } else {
+        iosDataPanel.hidden = true;
         platformNotice.textContent = "잠시 후 구글 플레이로 자동 이동합니다.";
         setTimeout(() => {
           window.location.replace(playUrl);

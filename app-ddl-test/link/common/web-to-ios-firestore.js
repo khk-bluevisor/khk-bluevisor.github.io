@@ -230,12 +230,11 @@ async function collectComparableSignals() {
   };
 }
 
-export async function saveWebToIosCandidate({ linkColor, businessParams }) {
+async function buildPayload({ linkColor, businessParams }) {
   const signalData = await collectComparableSignals();
-  const payload = {
+  const basePayload = {
     eventType: "ios_web_to_app_match_candidate",
     createdAtClientIso: new Date().toISOString(),
-    createdAtServer: serverTimestamp(),
     sourcePage: {
       href: window.location.href,
       host: window.location.host,
@@ -255,9 +254,57 @@ export async function saveWebToIosCandidate({ linkColor, businessParams }) {
     }
   };
 
-  const docRef = await addDoc(collection(firestore, collectionName), payload);
   return {
-    docId: docRef.id,
-    payload
+    payloadForStore: {
+      ...basePayload,
+      createdAtServer: serverTimestamp()
+    },
+    payloadForDisplay: {
+      ...basePayload,
+      createdAtServer: "(Firestore serverTimestamp)"
+    }
+  };
+}
+
+export async function saveWebToIosCandidate({ linkColor, businessParams }) {
+  const { payloadForStore, payloadForDisplay } = await buildPayload({
+    linkColor,
+    businessParams
+  });
+
+  try {
+    const docRef = await addDoc(collection(firestore, collectionName), payloadForStore);
+    return {
+      docId: docRef.id,
+      payloadForDisplay
+    };
+  } catch (error) {
+    const wrappedError = new Error("Firestore 저장 실패");
+    wrappedError.cause = error;
+    wrappedError.payloadForDisplay = payloadForDisplay;
+    throw wrappedError;
+  }
+}
+
+export function extractPayloadFromSaveError(error) {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+  return error.payloadForDisplay ?? null;
+}
+
+export function getErrorMessage(error) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return String(error);
+}
+
+export function formatPayloadForDisplay(payload, docId = null) {
+  return {
+    ...payload,
+    firestoreWriteResult: {
+      docId: docId ?? null
+    }
   };
 }
