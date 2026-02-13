@@ -192,6 +192,89 @@
         line-height: 1.5;
         color: inherit;
       }
+
+      .probe-controls {
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .probe-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .secondary-btn {
+        border: 0;
+        border-radius: 9px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        color: #ffffff;
+        background: #2a4365;
+      }
+
+      .secondary-btn:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+
+      .probe-status {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .probe-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .probe-table {
+        display: grid;
+        grid-template-columns: minmax(170px, 220px) 1fr;
+        gap: 8px 12px;
+      }
+
+      .probe-key {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 700;
+        color: #2b3448;
+      }
+
+      .probe-value {
+        margin: 0;
+        font-size: 13px;
+        color: #1c2332;
+        line-height: 1.5;
+        word-break: break-all;
+      }
+
+      .probe-json {
+        margin: 0;
+        max-height: 420px;
+        overflow: auto;
+        padding: 14px;
+        border-radius: 10px;
+        border: 1px solid #d7ddee;
+        background: #f7f9ff;
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 12px;
+        line-height: 1.55;
+        color: #1a2340;
+      }
+
+      @media (max-width: 720px) {
+        .probe-controls {
+          align-items: flex-start;
+        }
+
+        .probe-table {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
@@ -371,6 +454,35 @@
           referrer 파라미터를 포함해 바로 이동합니다.
         </p>
       </section>
+
+      <section class="panel">
+        <h2 class="section-title">사용자 유추 후보 데이터(설치 전)</h2>
+        <p class="notice">
+          iOS에서는 Install Referrer와 같은 공식 API가 없으므로, 설치 전 웹페이지에서 수집 가능한
+          데이터를 저장한 뒤 앱 최초 실행 시 수집한 데이터와 대조해 사용자를 유추하는 전략을 사용합니다.
+          아래 값은 그 후보 데이터 샘플입니다.
+        </p>
+
+        <div class="controls probe-controls">
+          <div class="probe-actions">
+            <button id="probe-refresh" class="secondary-btn" type="button">데이터 다시 수집</button>
+            <button id="probe-copy" class="secondary-btn" type="button">원본 JSON 복사</button>
+          </div>
+          <span id="probe-status" class="probe-status">수집 대기 중</span>
+        </div>
+
+        <div class="probe-grid">
+          <article class="card">
+            <h2>요약 정보</h2>
+            <div id="probe-summary-table" class="probe-table"></div>
+          </article>
+
+          <article class="card">
+            <h2>원본 JSON</h2>
+            <pre id="probe-json" class="probe-json">수집 대기 중...</pre>
+          </article>
+        </div>
+      </section>
     </main>
 
     <script>
@@ -413,6 +525,16 @@
       const universalLinkBaseUrl = `https://${universalLinkHost}/app-ddl-test/link`;
       const playStoreBaseUrl = "https://play.google.com/store/apps/details";
       const qrCodeBaseUrl = "https://api.qrserver.com/v1/create-qr-code/";
+      const storageKeys = {
+        visitorId: "app_ddl_probe_visitor_id",
+        firstSeenAt: "app_ddl_probe_first_seen_at",
+        visitCount: "app_ddl_probe_visit_count"
+      };
+      const probeRefreshButton = document.getElementById("probe-refresh");
+      const probeCopyButton = document.getElementById("probe-copy");
+      const probeStatus = document.getElementById("probe-status");
+      const probeSummaryTable = document.getElementById("probe-summary-table");
+      const probeJson = document.getElementById("probe-json");
 
       function sanitizeNumber(value) {
         const parsed = Number.parseInt(value ?? "", 10);
@@ -456,11 +578,516 @@
         });
       }
 
+      function setProbeStatus(message, isError = false) {
+        probeStatus.textContent = message;
+        probeStatus.style.color = isError ? "#b42318" : "var(--muted)";
+      }
+
+      function formatValueForDisplay(value) {
+        if (value === null || value === undefined) {
+          return "(없음)";
+        }
+        if (typeof value === "string") {
+          return value.length === 0 ? "(빈 문자열)" : value;
+        }
+        if (typeof value === "object") {
+          return JSON.stringify(value);
+        }
+        return String(value);
+      }
+
+      function renderSummaryRows(rows) {
+        probeSummaryTable.innerHTML = "";
+        rows.forEach(([key, value]) => {
+          const keyElement = document.createElement("p");
+          keyElement.className = "probe-key";
+          keyElement.textContent = key;
+
+          const valueElement = document.createElement("p");
+          valueElement.className = "probe-value";
+          valueElement.textContent = formatValueForDisplay(value);
+
+          probeSummaryTable.appendChild(keyElement);
+          probeSummaryTable.appendChild(valueElement);
+        });
+      }
+
+      function safeGetLocalStorageItem(key) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function safeSetLocalStorageItem(key, value) {
+        try {
+          window.localStorage.setItem(key, value);
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function createVisitorId() {
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+          return window.crypto.randomUUID();
+        }
+        return `vid-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+      }
+
+      function getVisitorState(nowIso) {
+        let visitorId = safeGetLocalStorageItem(storageKeys.visitorId);
+        let firstSeenAt = safeGetLocalStorageItem(storageKeys.firstSeenAt);
+        const storageWritable = safeSetLocalStorageItem("__probe_test__", "1");
+        if (storageWritable) {
+          window.localStorage.removeItem("__probe_test__");
+        }
+
+        if (!visitorId) {
+          visitorId = createVisitorId();
+          safeSetLocalStorageItem(storageKeys.visitorId, visitorId);
+        }
+
+        if (!firstSeenAt) {
+          firstSeenAt = nowIso;
+          safeSetLocalStorageItem(storageKeys.firstSeenAt, firstSeenAt);
+        }
+
+        let visitCount = Number.parseInt(
+          safeGetLocalStorageItem(storageKeys.visitCount) || "0",
+          10
+        );
+        if (Number.isNaN(visitCount) || visitCount < 0) {
+          visitCount = 0;
+        }
+        visitCount += 1;
+        safeSetLocalStorageItem(storageKeys.visitCount, String(visitCount));
+
+        try {
+          document.cookie =
+            `app_ddl_probe_visitor_id=${encodeURIComponent(visitorId)};` +
+            "Max-Age=31536000;Path=/;SameSite=Lax";
+        } catch (error) {}
+
+        return {
+          visitorId,
+          firstSeenAt,
+          visitCount,
+          storageWritable
+        };
+      }
+
+      function extractTrackingParams(queryParams) {
+        const fixedKeys = ["gclid", "fbclid", "ttclid", "msclkid", "yclid"];
+        const dynamicKeys = Array.from(queryParams.keys()).filter((key) =>
+          key.startsWith("utm_")
+        );
+        const allKeys = Array.from(new Set([...fixedKeys, ...dynamicKeys])).sort();
+        const result = {};
+
+        allKeys.forEach((key) => {
+          const values = queryParams.getAll(key).filter((value) => value.length > 0);
+          if (values.length > 0) {
+            result[key] = values;
+          }
+        });
+
+        return result;
+      }
+
+      function getConnectionInfo() {
+        const connection =
+          navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (!connection) {
+          return null;
+        }
+
+        return {
+          effectiveType: connection.effectiveType ?? null,
+          downlinkMbps: connection.downlink ?? null,
+          rttMs: connection.rtt ?? null,
+          saveData: connection.saveData ?? null,
+          type: connection.type ?? null
+        };
+      }
+
+      async function fetchJsonWithTimeout(url, timeoutMs) {
+        const controller = new AbortController();
+        const timerId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+          const response = await fetch(url, {
+            method: "GET",
+            cache: "no-store",
+            signal: controller.signal
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          return await response.json();
+        } finally {
+          window.clearTimeout(timerId);
+        }
+      }
+
+      async function fetchPublicIpData() {
+        const result = {
+          ip: null,
+          country: null,
+          region: null,
+          city: null,
+          timezone: null,
+          asn: null,
+          organization: null,
+          sources: [],
+          errors: []
+        };
+
+        try {
+          const ipify = await fetchJsonWithTimeout("https://api64.ipify.org?format=json", 3500);
+          if (typeof ipify?.ip === "string" && ipify.ip.length > 0) {
+            result.ip = ipify.ip;
+            result.sources.push("api64.ipify.org");
+          }
+        } catch (error) {
+          result.errors.push("api64.ipify.org 조회 실패");
+        }
+
+        try {
+          const ipapi = await fetchJsonWithTimeout("https://ipapi.co/json/", 4000);
+          if (typeof ipapi?.ip === "string" && ipapi.ip.length > 0) {
+            result.ip = result.ip || ipapi.ip;
+            result.sources.push("ipapi.co");
+          }
+          result.country = ipapi?.country_name ?? null;
+          result.region = ipapi?.region ?? null;
+          result.city = ipapi?.city ?? null;
+          result.timezone = ipapi?.timezone ?? null;
+          result.asn = ipapi?.asn ?? null;
+          result.organization = ipapi?.org ?? null;
+        } catch (error) {
+          result.errors.push("ipapi.co 조회 실패");
+        }
+
+        return result;
+      }
+
+      async function getPermissionStates() {
+        if (!navigator.permissions || typeof navigator.permissions.query !== "function") {
+          return null;
+        }
+
+        const permissionNames = ["geolocation", "notifications", "camera"];
+        const states = {};
+
+        await Promise.all(
+          permissionNames.map(async (permissionName) => {
+            try {
+              const status = await navigator.permissions.query({ name: permissionName });
+              states[permissionName] = status.state;
+            } catch (error) {
+              states[permissionName] = "unsupported";
+            }
+          })
+        );
+
+        return states;
+      }
+
+      async function getUserAgentClientHints() {
+        if (!navigator.userAgentData) {
+          return null;
+        }
+
+        const basic = {
+          mobile: navigator.userAgentData.mobile ?? null,
+          platform: navigator.userAgentData.platform ?? null,
+          brands: navigator.userAgentData.brands ?? null
+        };
+
+        if (typeof navigator.userAgentData.getHighEntropyValues !== "function") {
+          return basic;
+        }
+
+        try {
+          const highEntropy = await navigator.userAgentData.getHighEntropyValues([
+            "architecture",
+            "bitness",
+            "model",
+            "platformVersion",
+            "uaFullVersion"
+          ]);
+          return { ...basic, ...highEntropy };
+        } catch (error) {
+          return basic;
+        }
+      }
+
+      async function sha256Hex(value) {
+        if (!window.crypto || !window.crypto.subtle) {
+          return null;
+        }
+
+        const encoded = new TextEncoder().encode(value);
+        const hashBuffer = await window.crypto.subtle.digest("SHA-256", encoded);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
+      }
+
+      async function getCanvasFingerprintHash() {
+        const canvas = document.createElement("canvas");
+        canvas.width = 280;
+        canvas.height = 70;
+        const context = canvas.getContext("2d");
+        if (!context) {
+          return { supported: false, hash: null };
+        }
+
+        context.textBaseline = "alphabetic";
+        context.fillStyle = "#f60";
+        context.fillRect(6, 8, 210, 20);
+        context.fillStyle = "#069";
+        context.font = '15px "Arial"';
+        context.fillText("app-ddl-link fingerprint", 10, 24);
+        context.fillStyle = "rgba(102, 204, 0, 0.7)";
+        context.font = '17px "Times New Roman"';
+        context.fillText("text=red&number=7", 10, 54);
+
+        const dataUrl = canvas.toDataURL();
+        const hash = await sha256Hex(dataUrl);
+        return {
+          supported: true,
+          hash,
+          sample: dataUrl.slice(0, 64)
+        };
+      }
+
+      function getWebGlInfo() {
+        const canvas = document.createElement("canvas");
+        const gl =
+          canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+
+        if (!gl) {
+          return { supported: false };
+        }
+
+        const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+        return {
+          supported: true,
+          version: gl.getParameter(gl.VERSION),
+          shadingLanguageVersion: gl.getParameter(gl.SHADING_LANGUAGE_VERSION),
+          vendor: debugInfo
+            ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL)
+            : gl.getParameter(gl.VENDOR),
+          renderer: debugInfo
+            ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+            : gl.getParameter(gl.RENDERER)
+        };
+      }
+
+      function getStorageAvailability() {
+        const storage = {
+          localStorage: false,
+          sessionStorage: false
+        };
+
+        try {
+          window.localStorage.setItem("__probe_local__", "1");
+          window.localStorage.removeItem("__probe_local__");
+          storage.localStorage = true;
+        } catch (error) {}
+
+        try {
+          window.sessionStorage.setItem("__probe_session__", "1");
+          window.sessionStorage.removeItem("__probe_session__");
+          storage.sessionStorage = true;
+        } catch (error) {}
+
+        return storage;
+      }
+
+      async function collectProbeData() {
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const queryParams = new URLSearchParams(window.location.search);
+        const visitorState = getVisitorState(nowIso);
+        const localeInfo = Intl.DateTimeFormat().resolvedOptions();
+        const trackingParams = extractTrackingParams(queryParams);
+        const [publicIp, permissionStates, clientHints, canvasFingerprint] =
+          await Promise.all([
+            fetchPublicIpData(),
+            getPermissionStates(),
+            getUserAgentClientHints(),
+            getCanvasFingerprintHash()
+          ]);
+        const webgl = getWebGlInfo();
+        const storageAvailability = getStorageAvailability();
+        const numberFromQuery = queryParams.get("number");
+        const matchingHintSource = [
+          navigator.userAgent || "",
+          navigator.language || "",
+          String(screen.width || ""),
+          String(screen.height || ""),
+          String(window.devicePixelRatio || ""),
+          localeInfo.timeZone || "",
+          String(canvasFingerprint.hash || ""),
+          String(webgl.vendor || ""),
+          String(webgl.renderer || "")
+        ].join("|");
+        const matchingHintHash = await sha256Hex(matchingHintSource);
+
+        return {
+          collectedAtIso: nowIso,
+          page: {
+            url: window.location.href,
+            origin: window.location.origin,
+            pathname: window.location.pathname,
+            search: window.location.search,
+            hash: window.location.hash,
+            referrer: document.referrer || null,
+            historyLength: window.history.length
+          },
+          visitor: visitorState,
+          forwardedParams: {
+            text: queryParams.get("text"),
+            number: numberFromQuery ? sanitizeNumber(numberFromQuery) : null
+          },
+          trackingParams,
+          publicIp,
+          browser: {
+            userAgent: navigator.userAgent,
+            clientHints,
+            language: navigator.language ?? null,
+            languages: navigator.languages ?? null,
+            platform: navigator.platform ?? null,
+            vendor: navigator.vendor ?? null,
+            cookieEnabled: navigator.cookieEnabled,
+            doNotTrack: navigator.doNotTrack ?? null,
+            maxTouchPoints: navigator.maxTouchPoints ?? null,
+            hardwareConcurrency: navigator.hardwareConcurrency ?? null,
+            deviceMemoryGb: navigator.deviceMemory ?? null,
+            webdriver: navigator.webdriver ?? null
+          },
+          deviceAndDisplay: {
+            timezone: localeInfo.timeZone ?? null,
+            locale: localeInfo.locale ?? null,
+            utcOffsetMinutes: now.getTimezoneOffset(),
+            screenWidth: screen.width ?? null,
+            screenHeight: screen.height ?? null,
+            availWidth: screen.availWidth ?? null,
+            availHeight: screen.availHeight ?? null,
+            colorDepth: screen.colorDepth ?? null,
+            pixelDepth: screen.pixelDepth ?? null,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            devicePixelRatio: window.devicePixelRatio ?? null
+          },
+          network: {
+            online: navigator.onLine,
+            connection: getConnectionInfo()
+          },
+          permissions: permissionStates,
+          fingerprint: {
+            canvas: canvasFingerprint,
+            webgl,
+            matchingHintHash
+          },
+          storageAvailability
+        };
+      }
+
+      function renderProbeData(data) {
+        const summaryRows = [
+          ["publicIp.ip", data.publicIp.ip],
+          ["publicIp.country", data.publicIp.country],
+          ["publicIp.region", data.publicIp.region],
+          ["publicIp.city", data.publicIp.city],
+          ["publicIp.timezone", data.publicIp.timezone],
+          ["visitor.visitorId", data.visitor.visitorId],
+          ["visitor.firstSeenAt", data.visitor.firstSeenAt],
+          ["visitor.visitCount", data.visitor.visitCount],
+          ["page.referrer", data.page.referrer],
+          ["trackingParams", data.trackingParams],
+          ["forwardedParams", data.forwardedParams],
+          ["browser.userAgent", data.browser.userAgent],
+          ["browser.language", data.browser.language],
+          ["browser.platform", data.browser.platform],
+          ["device.timezone", data.deviceAndDisplay.timezone],
+          ["display.viewport", `${data.deviceAndDisplay.viewportWidth}x${data.deviceAndDisplay.viewportHeight}`],
+          ["display.screen", `${data.deviceAndDisplay.screenWidth}x${data.deviceAndDisplay.screenHeight}`],
+          ["network.connection", data.network.connection],
+          ["fingerprint.matchingHintHash", data.fingerprint.matchingHintHash],
+          ["fingerprint.webglRenderer", data.fingerprint.webgl.renderer]
+        ];
+        renderSummaryRows(summaryRows);
+        probeJson.textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function copyProbeJson() {
+        const text = probeJson.textContent || "";
+        if (!text.trim()) {
+          setProbeStatus("복사할 데이터가 없습니다.", true);
+          return;
+        }
+
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+          await navigator.clipboard.writeText(text);
+          setProbeStatus("원본 JSON을 클립보드에 복사했습니다.");
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+        setProbeStatus("원본 JSON을 클립보드에 복사했습니다.");
+      }
+
+      async function collectAndRenderProbeData() {
+        probeRefreshButton.disabled = true;
+        probeCopyButton.disabled = true;
+        setProbeStatus("사용자 유추 후보 데이터를 수집 중입니다...");
+        probeJson.textContent = "수집 중...";
+
+        try {
+          const data = await collectProbeData();
+          renderProbeData(data);
+          setProbeStatus(`수집 완료: ${new Date().toLocaleString("ko-KR")}`);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          setProbeStatus(`수집 실패: ${message}`, true);
+          probeJson.textContent = JSON.stringify(
+            { error: "데이터 수집 실패", message },
+            null,
+            2
+          );
+        } finally {
+          probeRefreshButton.disabled = false;
+          probeCopyButton.disabled = false;
+        }
+      }
+
       const initParams = new URLSearchParams(window.location.search);
       numberSelect.value = String(sanitizeNumber(initParams.get("number")));
 
       numberSelect.addEventListener("change", updateLinks);
+      probeRefreshButton.addEventListener("click", collectAndRenderProbeData);
+      probeCopyButton.addEventListener("click", () => {
+        copyProbeJson().catch((error) => {
+          const message = error instanceof Error ? error.message : String(error);
+          setProbeStatus(`복사 실패: ${message}`, true);
+        });
+      });
       updateLinks();
+      collectAndRenderProbeData();
     </script>
   </body>
 </html>
