@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Green 경로 리디렉션</title>
     <style>
+      :root {
+        --accent: #1e7a3f;
+        --accent-soft: #d4ecd7;
+        --surface: #f4fff6;
+        --panel-start: #1e7a3f;
+        --panel-end: #4fb870;
+      }
+
       body {
         margin: 0;
         padding: 28px 20px;
@@ -17,7 +25,7 @@
         max-width: 760px;
         margin: 0 auto;
         background: #ffffff;
-        border: 1px solid #d4ecd7;
+        border: 1px solid var(--accent-soft);
         border-radius: 16px;
         padding: 22px;
       }
@@ -25,7 +33,7 @@
       h1 {
         margin: 0;
         font-size: 24px;
-        color: #1e7a3f;
+        color: var(--accent);
       }
 
       p {
@@ -56,7 +64,7 @@
         padding: 10px 14px;
         border-radius: 10px;
         text-decoration: none;
-        background: #1e7a3f;
+        background: var(--accent);
         color: #ffffff;
         font-weight: 700;
       }
@@ -65,8 +73,8 @@
         margin-top: 16px;
         padding: 14px;
         border-radius: 12px;
-        border: 1px solid #d4ecd7;
-        background: #f4fff6;
+        border: 1px solid var(--accent-soft);
+        background: var(--surface);
       }
 
       .ios-data-panel h2 {
@@ -78,18 +86,98 @@
         margin-top: 8px;
       }
 
-      .ios-data-panel pre {
-        margin: 10px 0 0;
-        max-height: 360px;
-        overflow: auto;
-        padding: 12px;
-        border-radius: 10px;
-        border: 1px solid #d4ecd7;
-        background: #fcfffc;
-        font-family: "JetBrains Mono", "Consolas", monospace;
+      .ios-visual-panel {
+        margin-top: 12px;
+        padding: 18px 14px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--panel-start) 0%, var(--panel-end) 100%);
+        display: grid;
+        justify-items: center;
+        row-gap: 6px;
+        color: #ffffff;
+      }
+
+      .panel-key {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.18);
         font-size: 12px;
-        line-height: 1.55;
-        word-break: break-all;
+        font-weight: 700;
+      }
+
+      .panel-text {
+        font-size: 34px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+      }
+
+      .panel-number {
+        font-size: 72px;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .ios-data-sections {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .data-placeholder {
+        margin: 0;
+        color: #7b5f5f;
+      }
+
+      .data-section {
+        background: #ffffff;
+        border: 1px solid var(--accent-soft);
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+
+      .data-section h3 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: var(--accent);
+      }
+
+      .data-row {
+        display: grid;
+        grid-template-columns: minmax(130px, 180px) 1fr;
+        gap: 10px;
+        padding: 6px 0;
+        border-bottom: 1px dashed var(--accent-soft);
+      }
+
+      .data-row:last-child {
+        border-bottom: none;
+      }
+
+      .data-label {
+        font-weight: 700;
+        color: #28553a;
+      }
+
+      .data-value {
+        color: #232323;
+        word-break: break-word;
+        white-space: pre-wrap;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 18px;
+        }
+
+        .panel-number {
+          font-size: 60px;
+        }
+
+        .data-row {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
       }
     </style>
   </head>
@@ -106,16 +194,25 @@
         <h2>iOS 수집/저장 데이터</h2>
         <p id="iosDataSummary"></p>
         <p id="iosDataDocId"></p>
-        <pre id="iosDataJson">수집 대기 중...</pre>
+        <div id="iosVisualPanel" class="ios-visual-panel" hidden>
+          <span class="panel-key">text</span>
+          <span id="iosPanelText" class="panel-text">-</span>
+          <span class="panel-key">number</span>
+          <span id="iosPanelNumber" class="panel-number">-</span>
+        </div>
+        <div id="iosDataSections" class="ios-data-sections">
+          <p class="data-placeholder">수집 대기 중...</p>
+        </div>
       </section>
     </main>
 
     <script type="module">
       import {
+        buildHumanReadablePayload,
         extractPayloadFromSaveError,
         extractBusinessParams,
-        formatPayloadForDisplay,
         getErrorMessage,
+        isAndroidBrowser,
         isIOSBrowser,
         saveWebToIosCandidate
       } from "../common/web-to-ios-firestore.js";
@@ -129,34 +226,82 @@
       const iosDataPanel = document.getElementById("iosDataPanel");
       const iosDataSummary = document.getElementById("iosDataSummary");
       const iosDataDocId = document.getElementById("iosDataDocId");
-      const iosDataJson = document.getElementById("iosDataJson");
+      const iosVisualPanel = document.getElementById("iosVisualPanel");
+      const iosPanelText = document.getElementById("iosPanelText");
+      const iosPanelNumber = document.getElementById("iosPanelNumber");
+      const iosDataSections = document.getElementById("iosDataSections");
       document.getElementById("referrerText").textContent = `전달되는 referrer: ${businessParams.referrerRaw}`;
       document.getElementById("playUrl").textContent = playUrl;
       document.getElementById("manualLink").href = playUrl;
 
-      function renderIosPayload(payload) {
-        iosDataJson.textContent = JSON.stringify(payload, null, 2);
+      function renderRows(section, container) {
+        const sectionElement = document.createElement("section");
+        sectionElement.className = "data-section";
+        const titleElement = document.createElement("h3");
+        titleElement.textContent = section.title;
+        sectionElement.appendChild(titleElement);
+
+        section.rows.forEach((row) => {
+          const rowElement = document.createElement("div");
+          rowElement.className = "data-row";
+
+          const labelElement = document.createElement("div");
+          labelElement.className = "data-label";
+          labelElement.textContent = row.label;
+
+          const valueElement = document.createElement("div");
+          valueElement.className = "data-value";
+          valueElement.textContent = row.value;
+
+          rowElement.append(labelElement, valueElement);
+          sectionElement.appendChild(rowElement);
+        });
+
+        container.appendChild(sectionElement);
       }
 
-      if (isIOSBrowser()) {
+      function renderIosPayload(payload, docId = null) {
+        const readablePayload = buildHumanReadablePayload(payload, docId);
+        iosVisualPanel.hidden = false;
+        iosPanelText.textContent = readablePayload.panel.text;
+        iosPanelNumber.textContent = readablePayload.panel.number;
+
+        iosDataSections.replaceChildren();
+        readablePayload.sections.forEach((section) => {
+          renderRows(section, iosDataSections);
+        });
+      }
+
+      function renderFallbackMessage(message) {
+        iosVisualPanel.hidden = true;
+        iosDataSections.replaceChildren();
+        const placeholder = document.createElement("p");
+        placeholder.className = "data-placeholder";
+        placeholder.textContent = message;
+        iosDataSections.appendChild(placeholder);
+      }
+
+      const isIOS = isIOSBrowser();
+      const isAndroid = isAndroidBrowser();
+
+      if (isIOS) {
         iosDataPanel.hidden = false;
         platformNotice.textContent =
           "iOS 브라우저입니다. 자동 리디렉션하지 않으며, 아래에 사용자 유추/저장 데이터를 표시합니다.";
         iosDataSummary.textContent = "Firestore 저장 시도 중...";
         iosDataDocId.textContent = "docId: (저장 중)";
-        iosDataJson.textContent = "데이터 수집 중...";
+        renderFallbackMessage("데이터 수집 중...");
 
         saveWebToIosCandidate({
           linkColor: defaults.text,
           businessParams
         })
           .then(({ docId, payloadForDisplay }) => {
-            const payload = formatPayloadForDisplay(payloadForDisplay, docId);
             platformNotice.textContent =
               `iOS 브라우저입니다. Firestore 저장 완료(docId: ${docId}).`;
             iosDataSummary.textContent = "Firestore 저장 성공";
             iosDataDocId.textContent = `docId: ${docId}`;
-            renderIosPayload(payload);
+            renderIosPayload(payloadForDisplay, docId);
           })
           .catch((error) => {
             console.error("[web-to-ios] green save failed:", error);
@@ -167,21 +312,21 @@
             iosDataSummary.textContent = `Firestore 저장 실패: ${message}`;
             iosDataDocId.textContent = "docId: (없음)";
             if (payload) {
-              renderIosPayload(formatPayloadForDisplay(payload));
+              renderIosPayload(payload);
             } else {
-              iosDataJson.textContent = JSON.stringify(
-                { error: "Firestore 저장 실패", message },
-                null,
-                2
-              );
+              renderFallbackMessage(`표시 가능한 데이터가 없습니다. (${message})`);
             }
           });
-      } else {
+      } else if (isAndroid) {
         iosDataPanel.hidden = true;
-        platformNotice.textContent = "잠시 후 구글 플레이로 자동 이동합니다.";
+        platformNotice.textContent = "안드로이드 브라우저입니다. 잠시 후 구글 플레이로 자동 이동합니다.";
         setTimeout(() => {
           window.location.replace(playUrl);
         }, 0);
+      } else {
+        iosDataPanel.hidden = true;
+        platformNotice.textContent =
+          "이 브라우저는 자동 리디렉션과 사용자 유추 데이터 수집을 수행하지 않습니다.";
       }
     </script>
   </body>

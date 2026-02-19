@@ -66,6 +66,12 @@
         background: #f7f9ff;
       }
 
+      .control-inputs {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
       .controls label {
         font-weight: 700;
         font-size: 14px;
@@ -77,6 +83,34 @@
         padding: 7px 10px;
         font-size: 14px;
         background: #ffffff;
+      }
+
+      .number-preview {
+        margin-left: auto;
+        min-width: 164px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 12px;
+        border-radius: 11px;
+        border: 1px solid #c8d4f1;
+        background: linear-gradient(135deg, #ffffff 0%, #ecf2ff 100%);
+      }
+
+      .number-preview-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #44516c;
+      }
+
+      .number-preview-value {
+        margin: 0;
+        font-size: 42px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: 0.5px;
+        color: #1f2f64;
       }
 
       .grid {
@@ -267,6 +301,19 @@
       }
 
       @media (max-width: 720px) {
+        .controls {
+          align-items: flex-start;
+        }
+
+        .control-inputs {
+          width: 100%;
+        }
+
+        .number-preview {
+          margin-left: 0;
+          width: 100%;
+        }
+
         .probe-controls {
           align-items: flex-start;
         }
@@ -289,19 +336,25 @@
 
       <section class="panel">
         <div class="controls">
-          <label for="numberSelect">전달할 숫자(number)</label>
-          <select id="numberSelect">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
-            <option value="9">9</option>
-            <option value="10">10</option>
-          </select>
+          <div class="control-inputs">
+            <label for="numberSelect">전달할 숫자(number)</label>
+            <select id="numberSelect">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+            </select>
+          </div>
+          <div class="number-preview" aria-live="polite">
+            <span class="number-preview-label">선택된 number</span>
+            <p id="selectedNumberDisplay" class="number-preview-value">1</p>
+          </div>
         </div>
 
         <h2 class="section-title">HTTPS 앱링크 버전</h2>
@@ -456,17 +509,17 @@
       </section>
 
       <section class="panel">
-        <h2 class="section-title">사용자 유추 후보 데이터(설치 전)</h2>
+        <h2 class="section-title">사용자 유추 후보 데이터(웹-앱 교집합)</h2>
         <p class="notice">
-          iOS에서는 Install Referrer와 같은 공식 API가 없으므로, 설치 전 웹페이지에서 수집 가능한
-          데이터를 저장한 뒤 앱 최초 실행 시 수집한 데이터와 대조해 사용자를 유추하는 전략을 사용합니다.
-          아래 값은 그 후보 데이터 샘플입니다.
+          아래 값은 Safari 웹페이지와 iOS 네이티브 앱 양쪽에서 모두 수집 가능한 항목 위주로 구성했습니다.
+          서버에 웹 방문 시점 값을 저장해 두고, 앱 최초 실행 시 동일 항목을 수집해 확률적으로 매칭할 때
+          사용할 수 있습니다.
         </p>
 
         <div class="controls probe-controls">
           <div class="probe-actions">
             <button id="probe-refresh" class="secondary-btn" type="button">데이터 다시 수집</button>
-            <button id="probe-copy" class="secondary-btn" type="button">원본 JSON 복사</button>
+            <button id="probe-copy" class="secondary-btn" type="button">교집합 JSON 복사</button>
           </div>
           <span id="probe-status" class="probe-status">수집 대기 중</span>
         </div>
@@ -487,6 +540,7 @@
 
     <script>
       const numberSelect = document.getElementById("numberSelect");
+      const selectedNumberDisplay = document.getElementById("selectedNumberDisplay");
       const cards = [
         {
           text: "red",
@@ -525,11 +579,6 @@
       const universalLinkBaseUrl = `https://${universalLinkHost}/app-ddl-test/link`;
       const playStoreBaseUrl = "https://play.google.com/store/apps/details";
       const qrCodeBaseUrl = "https://api.qrserver.com/v1/create-qr-code/";
-      const storageKeys = {
-        visitorId: "app_ddl_probe_visitor_id",
-        firstSeenAt: "app_ddl_probe_first_seen_at",
-        visitCount: "app_ddl_probe_visit_count"
-      };
       const probeRefreshButton = document.getElementById("probe-refresh");
       const probeCopyButton = document.getElementById("probe-copy");
       const probeStatus = document.getElementById("probe-status");
@@ -546,6 +595,7 @@
 
       function updateLinks() {
         const numberValue = sanitizeNumber(numberSelect.value);
+        selectedNumberDisplay.textContent = String(numberValue);
         cards.forEach(({
           text,
           linkId,
@@ -610,90 +660,6 @@
           probeSummaryTable.appendChild(keyElement);
           probeSummaryTable.appendChild(valueElement);
         });
-      }
-
-      function safeGetLocalStorageItem(key) {
-        try {
-          return window.localStorage.getItem(key);
-        } catch (error) {
-          return null;
-        }
-      }
-
-      function safeSetLocalStorageItem(key, value) {
-        try {
-          window.localStorage.setItem(key, value);
-          return true;
-        } catch (error) {
-          return false;
-        }
-      }
-
-      function createVisitorId() {
-        if (window.crypto && typeof window.crypto.randomUUID === "function") {
-          return window.crypto.randomUUID();
-        }
-        return `vid-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
-      }
-
-      function getVisitorState(nowIso) {
-        let visitorId = safeGetLocalStorageItem(storageKeys.visitorId);
-        let firstSeenAt = safeGetLocalStorageItem(storageKeys.firstSeenAt);
-        const storageWritable = safeSetLocalStorageItem("__probe_test__", "1");
-        if (storageWritable) {
-          window.localStorage.removeItem("__probe_test__");
-        }
-
-        if (!visitorId) {
-          visitorId = createVisitorId();
-          safeSetLocalStorageItem(storageKeys.visitorId, visitorId);
-        }
-
-        if (!firstSeenAt) {
-          firstSeenAt = nowIso;
-          safeSetLocalStorageItem(storageKeys.firstSeenAt, firstSeenAt);
-        }
-
-        let visitCount = Number.parseInt(
-          safeGetLocalStorageItem(storageKeys.visitCount) || "0",
-          10
-        );
-        if (Number.isNaN(visitCount) || visitCount < 0) {
-          visitCount = 0;
-        }
-        visitCount += 1;
-        safeSetLocalStorageItem(storageKeys.visitCount, String(visitCount));
-
-        try {
-          document.cookie =
-            `app_ddl_probe_visitor_id=${encodeURIComponent(visitorId)};` +
-            "Max-Age=31536000;Path=/;SameSite=Lax";
-        } catch (error) {}
-
-        return {
-          visitorId,
-          firstSeenAt,
-          visitCount,
-          storageWritable
-        };
-      }
-
-      function extractTrackingParams(queryParams) {
-        const fixedKeys = ["gclid", "fbclid", "ttclid", "msclkid", "yclid"];
-        const dynamicKeys = Array.from(queryParams.keys()).filter((key) =>
-          key.startsWith("utm_")
-        );
-        const allKeys = Array.from(new Set([...fixedKeys, ...dynamicKeys])).sort();
-        const result = {};
-
-        allKeys.forEach((key) => {
-          const values = queryParams.getAll(key).filter((value) => value.length > 0);
-          if (values.length > 0) {
-            result[key] = values;
-          }
-        });
-
-        return result;
       }
 
       function getConnectionInfo() {
@@ -797,35 +763,6 @@
         return states;
       }
 
-      async function getUserAgentClientHints() {
-        if (!navigator.userAgentData) {
-          return null;
-        }
-
-        const basic = {
-          mobile: navigator.userAgentData.mobile ?? null,
-          platform: navigator.userAgentData.platform ?? null,
-          brands: navigator.userAgentData.brands ?? null
-        };
-
-        if (typeof navigator.userAgentData.getHighEntropyValues !== "function") {
-          return basic;
-        }
-
-        try {
-          const highEntropy = await navigator.userAgentData.getHighEntropyValues([
-            "architecture",
-            "bitness",
-            "model",
-            "platformVersion",
-            "uaFullVersion"
-          ]);
-          return { ...basic, ...highEntropy };
-        } catch (error) {
-          return basic;
-        }
-      }
-
       async function sha256Hex(value) {
         if (!window.crypto || !window.crypto.subtle) {
           return null;
@@ -837,165 +774,71 @@
         return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
       }
 
-      async function getCanvasFingerprintHash() {
-        const canvas = document.createElement("canvas");
-        canvas.width = 280;
-        canvas.height = 70;
-        const context = canvas.getContext("2d");
-        if (!context) {
-          return { supported: false, hash: null };
-        }
-
-        context.textBaseline = "alphabetic";
-        context.fillStyle = "#f60";
-        context.fillRect(6, 8, 210, 20);
-        context.fillStyle = "#069";
-        context.font = '15px "Arial"';
-        context.fillText("app-ddl-link fingerprint", 10, 24);
-        context.fillStyle = "rgba(102, 204, 0, 0.7)";
-        context.font = '17px "Times New Roman"';
-        context.fillText("text=red&number=7", 10, 54);
-
-        const dataUrl = canvas.toDataURL();
-        const hash = await sha256Hex(dataUrl);
-        return {
-          supported: true,
-          hash,
-          sample: dataUrl.slice(0, 64)
-        };
-      }
-
-      function getWebGlInfo() {
-        const canvas = document.createElement("canvas");
-        const gl =
-          canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-
-        if (!gl) {
-          return { supported: false };
-        }
-
-        const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
-        return {
-          supported: true,
-          version: gl.getParameter(gl.VERSION),
-          shadingLanguageVersion: gl.getParameter(gl.SHADING_LANGUAGE_VERSION),
-          vendor: debugInfo
-            ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL)
-            : gl.getParameter(gl.VENDOR),
-          renderer: debugInfo
-            ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
-            : gl.getParameter(gl.RENDERER)
-        };
-      }
-
-      function getStorageAvailability() {
-        const storage = {
-          localStorage: false,
-          sessionStorage: false
-        };
-
-        try {
-          window.localStorage.setItem("__probe_local__", "1");
-          window.localStorage.removeItem("__probe_local__");
-          storage.localStorage = true;
-        } catch (error) {}
-
-        try {
-          window.sessionStorage.setItem("__probe_session__", "1");
-          window.sessionStorage.removeItem("__probe_session__");
-          storage.sessionStorage = true;
-        } catch (error) {}
-
-        return storage;
-      }
-
-      async function collectProbeData() {
+      async function collectComparableProbeData() {
         const now = new Date();
-        const nowIso = now.toISOString();
-        const queryParams = new URLSearchParams(window.location.search);
-        const visitorState = getVisitorState(nowIso);
         const localeInfo = Intl.DateTimeFormat().resolvedOptions();
-        const trackingParams = extractTrackingParams(queryParams);
-        const [publicIp, permissionStates, clientHints, canvasFingerprint] =
-          await Promise.all([
-            fetchPublicIpData(),
-            getPermissionStates(),
-            getUserAgentClientHints(),
-            getCanvasFingerprintHash()
-          ]);
-        const webgl = getWebGlInfo();
-        const storageAvailability = getStorageAvailability();
-        const numberFromQuery = queryParams.get("number");
-        const matchingHintSource = [
-          navigator.userAgent || "",
-          navigator.language || "",
-          String(screen.width || ""),
-          String(screen.height || ""),
-          String(window.devicePixelRatio || ""),
-          localeInfo.timeZone || "",
-          String(canvasFingerprint.hash || ""),
-          String(webgl.vendor || ""),
-          String(webgl.renderer || "")
+        const connectionInfo = getConnectionInfo();
+        const [publicIp, permissionStates] = await Promise.all([
+          fetchPublicIpData(),
+          getPermissionStates()
+        ]);
+
+        const comparableSignals = {
+          timezone: localeInfo.timeZone ?? null,
+          locale: localeInfo.locale ?? null,
+          calendar: localeInfo.calendar ?? null,
+          numberingSystem: localeInfo.numberingSystem ?? null,
+          utcOffsetMinutes: now.getTimezoneOffset(),
+          language: navigator.language ?? null,
+          languages: navigator.languages ?? null,
+          platform: navigator.platform ?? null,
+          maxTouchPoints: navigator.maxTouchPoints ?? null,
+          hardwareConcurrency: navigator.hardwareConcurrency ?? null,
+          deviceMemoryGb: navigator.deviceMemory ?? null,
+          screenWidth: screen.width ?? null,
+          screenHeight: screen.height ?? null,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          devicePixelRatio: window.devicePixelRatio ?? null,
+          colorDepth: screen.colorDepth ?? null,
+          online: navigator.onLine,
+          connection: connectionInfo,
+          permissions: permissionStates
+        };
+
+        const comparableSignalSource = [
+          publicIp.ip ?? "",
+          comparableSignals.timezone ?? "",
+          String(comparableSignals.utcOffsetMinutes ?? ""),
+          comparableSignals.locale ?? "",
+          comparableSignals.language ?? "",
+          JSON.stringify(comparableSignals.languages ?? []),
+          comparableSignals.platform ?? "",
+          String(comparableSignals.maxTouchPoints ?? ""),
+          String(comparableSignals.hardwareConcurrency ?? ""),
+          String(comparableSignals.screenWidth ?? ""),
+          String(comparableSignals.screenHeight ?? ""),
+          String(comparableSignals.devicePixelRatio ?? ""),
+          comparableSignals.connection?.effectiveType ?? "",
+          comparableSignals.connection?.type ?? ""
         ].join("|");
-        const matchingHintHash = await sha256Hex(matchingHintSource);
+        const comparableSignalHash = await sha256Hex(comparableSignalSource);
 
         return {
-          collectedAtIso: nowIso,
-          page: {
-            url: window.location.href,
-            origin: window.location.origin,
-            pathname: window.location.pathname,
-            search: window.location.search,
-            hash: window.location.hash,
-            referrer: document.referrer || null,
-            historyLength: window.history.length
-          },
-          visitor: visitorState,
-          forwardedParams: {
-            text: queryParams.get("text"),
-            number: numberFromQuery ? sanitizeNumber(numberFromQuery) : null
-          },
-          trackingParams,
+          collectedAtIso: now.toISOString(),
           publicIp,
-          browser: {
-            userAgent: navigator.userAgent,
-            clientHints,
-            language: navigator.language ?? null,
-            languages: navigator.languages ?? null,
-            platform: navigator.platform ?? null,
-            vendor: navigator.vendor ?? null,
-            cookieEnabled: navigator.cookieEnabled,
-            doNotTrack: navigator.doNotTrack ?? null,
-            maxTouchPoints: navigator.maxTouchPoints ?? null,
-            hardwareConcurrency: navigator.hardwareConcurrency ?? null,
-            deviceMemoryGb: navigator.deviceMemory ?? null,
-            webdriver: navigator.webdriver ?? null
+          comparableSignals,
+          matchingHint: {
+            comparableSignalHash,
+            note:
+              "해시는 동일성 후보 비교용이며 고유 식별자를 보장하지 않습니다. 서버에서는 시간창/IP/로케일 등 복합 점수로 매칭하세요."
           },
-          deviceAndDisplay: {
-            timezone: localeInfo.timeZone ?? null,
-            locale: localeInfo.locale ?? null,
-            utcOffsetMinutes: now.getTimezoneOffset(),
-            screenWidth: screen.width ?? null,
-            screenHeight: screen.height ?? null,
-            availWidth: screen.availWidth ?? null,
-            availHeight: screen.availHeight ?? null,
-            colorDepth: screen.colorDepth ?? null,
-            pixelDepth: screen.pixelDepth ?? null,
-            viewportWidth: window.innerWidth,
-            viewportHeight: window.innerHeight,
-            devicePixelRatio: window.devicePixelRatio ?? null
-          },
-          network: {
-            online: navigator.onLine,
-            connection: getConnectionInfo()
-          },
-          permissions: permissionStates,
-          fingerprint: {
-            canvas: canvasFingerprint,
-            webgl,
-            matchingHintHash
-          },
-          storageAvailability
+          recommendedExtraForServer: [
+            "웹 방문 서버시각(UTC)",
+            "앱 최초 실행 서버시각(UTC)",
+            "앱 버전/OS 버전",
+            "앱에서 조회한 동일 IP Geo 응답"
+          ]
         };
       }
 
@@ -1006,21 +849,20 @@
           ["publicIp.region", data.publicIp.region],
           ["publicIp.city", data.publicIp.city],
           ["publicIp.timezone", data.publicIp.timezone],
-          ["visitor.visitorId", data.visitor.visitorId],
-          ["visitor.firstSeenAt", data.visitor.firstSeenAt],
-          ["visitor.visitCount", data.visitor.visitCount],
-          ["page.referrer", data.page.referrer],
-          ["trackingParams", data.trackingParams],
-          ["forwardedParams", data.forwardedParams],
-          ["browser.userAgent", data.browser.userAgent],
-          ["browser.language", data.browser.language],
-          ["browser.platform", data.browser.platform],
-          ["device.timezone", data.deviceAndDisplay.timezone],
-          ["display.viewport", `${data.deviceAndDisplay.viewportWidth}x${data.deviceAndDisplay.viewportHeight}`],
-          ["display.screen", `${data.deviceAndDisplay.screenWidth}x${data.deviceAndDisplay.screenHeight}`],
-          ["network.connection", data.network.connection],
-          ["fingerprint.matchingHintHash", data.fingerprint.matchingHintHash],
-          ["fingerprint.webglRenderer", data.fingerprint.webgl.renderer]
+          ["signal.timezone", data.comparableSignals.timezone],
+          ["signal.locale", data.comparableSignals.locale],
+          ["signal.language", data.comparableSignals.language],
+          ["signal.languages", data.comparableSignals.languages],
+          ["signal.platform", data.comparableSignals.platform],
+          ["signal.maxTouchPoints", data.comparableSignals.maxTouchPoints],
+          ["signal.hardwareConcurrency", data.comparableSignals.hardwareConcurrency],
+          ["signal.screen", `${data.comparableSignals.screenWidth}x${data.comparableSignals.screenHeight}`],
+          ["signal.viewport", `${data.comparableSignals.viewportWidth}x${data.comparableSignals.viewportHeight}`],
+          ["signal.devicePixelRatio", data.comparableSignals.devicePixelRatio],
+          ["signal.online", data.comparableSignals.online],
+          ["signal.connection", data.comparableSignals.connection],
+          ["signal.permissions", data.comparableSignals.permissions],
+          ["matchingHint.comparableSignalHash", data.matchingHint.comparableSignalHash]
         ];
         renderSummaryRows(summaryRows);
         probeJson.textContent = JSON.stringify(data, null, 2);
@@ -1035,7 +877,7 @@
 
         if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
           await navigator.clipboard.writeText(text);
-          setProbeStatus("원본 JSON을 클립보드에 복사했습니다.");
+          setProbeStatus("교집합 JSON을 클립보드에 복사했습니다.");
           return;
         }
 
@@ -1048,17 +890,17 @@
         textarea.select();
         document.execCommand("copy");
         textarea.remove();
-        setProbeStatus("원본 JSON을 클립보드에 복사했습니다.");
+        setProbeStatus("교집합 JSON을 클립보드에 복사했습니다.");
       }
 
       async function collectAndRenderProbeData() {
         probeRefreshButton.disabled = true;
         probeCopyButton.disabled = true;
-        setProbeStatus("사용자 유추 후보 데이터를 수집 중입니다...");
+        setProbeStatus("웹-앱 교집합 데이터를 수집 중입니다...");
         probeJson.textContent = "수집 중...";
 
         try {
-          const data = await collectProbeData();
+          const data = await collectComparableProbeData();
           renderProbeData(data);
           setProbeStatus(`수집 완료: ${new Date().toLocaleString("ko-KR")}`);
         } catch (error) {
