@@ -145,17 +145,6 @@ async function fetchPublicIpData() {
   return result;
 }
 
-async function sha256Hex(value) {
-  if (!window.crypto || !window.crypto.subtle) {
-    return null;
-  }
-
-  const encoded = new TextEncoder().encode(value);
-  const hashBuffer = await window.crypto.subtle.digest("SHA-256", encoded);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
 async function collectComparableSignals() {
   const now = new Date();
   const localeInfo = Intl.DateTimeFormat().resolvedOptions();
@@ -164,7 +153,6 @@ async function collectComparableSignals() {
 
   const comparableSignals = {
     timezone: localeInfo.timeZone ?? null,
-    locale: localeInfo.locale ?? null,
     calendar: localeInfo.calendar ?? null,
     numberingSystem: localeInfo.numberingSystem ?? null,
     utcOffsetMinutes: now.getTimezoneOffset(),
@@ -172,40 +160,18 @@ async function collectComparableSignals() {
     languages: navigator.languages ?? null,
     platform: navigator.platform ?? null,
     maxTouchPoints: navigator.maxTouchPoints ?? null,
-    hardwareConcurrency: navigator.hardwareConcurrency ?? null,
     deviceMemoryGb: navigator.deviceMemory ?? null,
     screenWidth: screen.width ?? null,
     screenHeight: screen.height ?? null,
     viewportWidth: window.innerWidth,
-    viewportHeight: window.innerHeight,
     devicePixelRatio: window.devicePixelRatio ?? null,
     colorDepth: screen.colorDepth ?? null,
-    online: navigator.onLine,
     connection
   };
 
-  const comparableSignalSource = [
-    publicIp.ip ?? "",
-    comparableSignals.timezone ?? "",
-    String(comparableSignals.utcOffsetMinutes ?? ""),
-    comparableSignals.locale ?? "",
-    comparableSignals.language ?? "",
-    JSON.stringify(comparableSignals.languages ?? []),
-    comparableSignals.platform ?? "",
-    String(comparableSignals.maxTouchPoints ?? ""),
-    String(comparableSignals.hardwareConcurrency ?? ""),
-    String(comparableSignals.screenWidth ?? ""),
-    String(comparableSignals.screenHeight ?? ""),
-    String(comparableSignals.devicePixelRatio ?? ""),
-    comparableSignals.connection?.effectiveType ?? "",
-    comparableSignals.connection?.type ?? ""
-  ].join("|");
-  const comparableSignalHash = await sha256Hex(comparableSignalSource);
-
   return {
     publicIp,
-    comparableSignals,
-    comparableSignalHash
+    comparableSignals
   };
 }
 
@@ -228,8 +194,7 @@ async function buildPayload({ linkColor, businessParams }) {
     },
     matchSignals: {
       publicIp: signalData.publicIp,
-      comparableSignals: signalData.comparableSignals,
-      comparableSignalHash: signalData.comparableSignalHash
+      comparableSignals: signalData.comparableSignals
     }
   };
 
@@ -359,13 +324,6 @@ function formatOptionalNumber(value, suffix = "") {
   return suffix ? `${baseValue}${suffix}` : baseValue;
 }
 
-function formatOnline(value) {
-  if (value === null || value === undefined) {
-    return "없음";
-  }
-  return value ? "온라인" : "오프라인";
-}
-
 function formatConnection(connection) {
   if (!connection || typeof connection !== "object") {
     return "없음";
@@ -477,20 +435,16 @@ export function buildHumanReadablePayload(payload, docId = null) {
         { label: "웹-IP 시간대", value: asDisplayText(publicIp.timezone) },
         { label: "브라우저 시간대", value: asDisplayText(comparableSignals.timezone) },
         { label: "UTC 오프셋", value: formatUtcOffset(comparableSignals.utcOffsetMinutes) },
-        { label: "로케일", value: asDisplayText(comparableSignals.locale) },
         { label: "기본 언어", value: asDisplayText(comparableSignals.language) },
         { label: "언어 목록", value: formatArray(comparableSignals.languages) },
         { label: "플랫폼", value: asDisplayText(comparableSignals.platform) },
         { label: "터치 포인트", value: formatOptionalNumber(comparableSignals.maxTouchPoints) },
-        { label: "CPU 코어 수", value: formatOptionalNumber(comparableSignals.hardwareConcurrency) },
         { label: "메모리", value: formatOptionalNumber(comparableSignals.deviceMemoryGb, " GB") },
         { label: "화면 해상도(px)", value: formatSize(comparableSignals.screenWidth, comparableSignals.screenHeight) },
-        { label: "뷰포트(px)", value: formatSize(comparableSignals.viewportWidth, comparableSignals.viewportHeight) },
+        { label: "뷰포트 너비(px)", value: formatOptionalNumber(comparableSignals.viewportWidth) },
         { label: "DPR", value: formatOptionalNumber(comparableSignals.devicePixelRatio) },
         { label: "색 깊이(colorDepth)", value: formatOptionalNumber(comparableSignals.colorDepth) },
-        { label: "온라인 상태", value: formatOnline(comparableSignals.online) },
-        { label: "네트워크 정보", value: formatConnection(connection) },
-        { label: "비교용 해시", value: asDisplayText(matchSignals.comparableSignalHash) }
+        { label: "네트워크 정보", value: formatConnection(connection) }
       ]
     },
     {

@@ -763,17 +763,6 @@
         return states;
       }
 
-      async function sha256Hex(value) {
-        if (!window.crypto || !window.crypto.subtle) {
-          return null;
-        }
-
-        const encoded = new TextEncoder().encode(value);
-        const hashBuffer = await window.crypto.subtle.digest("SHA-256", encoded);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
-      }
-
       async function collectComparableProbeData() {
         const now = new Date();
         const localeInfo = Intl.DateTimeFormat().resolvedOptions();
@@ -785,7 +774,6 @@
 
         const comparableSignals = {
           timezone: localeInfo.timeZone ?? null,
-          locale: localeInfo.locale ?? null,
           calendar: localeInfo.calendar ?? null,
           numberingSystem: localeInfo.numberingSystem ?? null,
           utcOffsetMinutes: now.getTimezoneOffset(),
@@ -793,46 +781,20 @@
           languages: navigator.languages ?? null,
           platform: navigator.platform ?? null,
           maxTouchPoints: navigator.maxTouchPoints ?? null,
-          hardwareConcurrency: navigator.hardwareConcurrency ?? null,
           deviceMemoryGb: navigator.deviceMemory ?? null,
           screenWidth: screen.width ?? null,
           screenHeight: screen.height ?? null,
           viewportWidth: window.innerWidth,
-          viewportHeight: window.innerHeight,
           devicePixelRatio: window.devicePixelRatio ?? null,
           colorDepth: screen.colorDepth ?? null,
-          online: navigator.onLine,
           connection: connectionInfo,
           permissions: permissionStates
         };
-
-        const comparableSignalSource = [
-          publicIp.ip ?? "",
-          comparableSignals.timezone ?? "",
-          String(comparableSignals.utcOffsetMinutes ?? ""),
-          comparableSignals.locale ?? "",
-          comparableSignals.language ?? "",
-          JSON.stringify(comparableSignals.languages ?? []),
-          comparableSignals.platform ?? "",
-          String(comparableSignals.maxTouchPoints ?? ""),
-          String(comparableSignals.hardwareConcurrency ?? ""),
-          String(comparableSignals.screenWidth ?? ""),
-          String(comparableSignals.screenHeight ?? ""),
-          String(comparableSignals.devicePixelRatio ?? ""),
-          comparableSignals.connection?.effectiveType ?? "",
-          comparableSignals.connection?.type ?? ""
-        ].join("|");
-        const comparableSignalHash = await sha256Hex(comparableSignalSource);
 
         return {
           collectedAtIso: now.toISOString(),
           publicIp,
           comparableSignals,
-          matchingHint: {
-            comparableSignalHash,
-            note:
-              "해시는 동일성 후보 비교용이며 고유 식별자를 보장하지 않습니다. 서버에서는 시간창/IP/로케일 등 복합 점수로 매칭하세요."
-          },
           recommendedExtraForServer: [
             "웹 방문 서버시각(UTC)",
             "앱 최초 실행 서버시각(UTC)",
@@ -850,19 +812,15 @@
           ["publicIp.city", data.publicIp.city],
           ["publicIp.timezone", data.publicIp.timezone],
           ["signal.timezone", data.comparableSignals.timezone],
-          ["signal.locale", data.comparableSignals.locale],
           ["signal.language", data.comparableSignals.language],
           ["signal.languages", data.comparableSignals.languages],
           ["signal.platform", data.comparableSignals.platform],
           ["signal.maxTouchPoints", data.comparableSignals.maxTouchPoints],
-          ["signal.hardwareConcurrency", data.comparableSignals.hardwareConcurrency],
           ["signal.screen", `${data.comparableSignals.screenWidth}x${data.comparableSignals.screenHeight}`],
-          ["signal.viewport", `${data.comparableSignals.viewportWidth}x${data.comparableSignals.viewportHeight}`],
+          ["signal.viewportWidth", data.comparableSignals.viewportWidth],
           ["signal.devicePixelRatio", data.comparableSignals.devicePixelRatio],
-          ["signal.online", data.comparableSignals.online],
           ["signal.connection", data.comparableSignals.connection],
-          ["signal.permissions", data.comparableSignals.permissions],
-          ["matchingHint.comparableSignalHash", data.matchingHint.comparableSignalHash]
+          ["signal.permissions", data.comparableSignals.permissions]
         ];
         renderSummaryRows(summaryRows);
         probeJson.textContent = JSON.stringify(data, null, 2);
