@@ -145,28 +145,6 @@ async function fetchPublicIpData() {
   return result;
 }
 
-async function getPermissionStates() {
-  if (!navigator.permissions || typeof navigator.permissions.query !== "function") {
-    return null;
-  }
-
-  const permissionNames = ["geolocation", "notifications", "camera"];
-  const states = {};
-
-  await Promise.all(
-    permissionNames.map(async (permissionName) => {
-      try {
-        const status = await navigator.permissions.query({ name: permissionName });
-        states[permissionName] = status.state;
-      } catch (error) {
-        states[permissionName] = "unsupported";
-      }
-    })
-  );
-
-  return states;
-}
-
 async function sha256Hex(value) {
   if (!window.crypto || !window.crypto.subtle) {
     return null;
@@ -181,10 +159,7 @@ async function sha256Hex(value) {
 async function collectComparableSignals() {
   const now = new Date();
   const localeInfo = Intl.DateTimeFormat().resolvedOptions();
-  const [publicIp, permissions] = await Promise.all([
-    fetchPublicIpData(),
-    getPermissionStates()
-  ]);
+  const publicIp = await fetchPublicIpData();
   const connection = getConnectionInfo();
 
   const comparableSignals = {
@@ -206,8 +181,7 @@ async function collectComparableSignals() {
     devicePixelRatio: window.devicePixelRatio ?? null,
     colorDepth: screen.colorDepth ?? null,
     online: navigator.onLine,
-    connection,
-    permissions
+    connection
   };
 
   const comparableSignalSource = [
@@ -417,36 +391,6 @@ function formatConnection(connection) {
   return parts.join(" / ");
 }
 
-function formatPermission(value) {
-  const normalized = typeof value === "string" ? value.toLowerCase() : null;
-  if (!normalized) {
-    return "없음";
-  }
-
-  switch (normalized) {
-    case "authorized":
-    case "authorized_always":
-    case "authorized_when_in_use":
-    case "granted":
-      return "허용";
-    case "denied":
-      return "거부";
-    case "restricted":
-      return "제한";
-    case "not_determined":
-    case "prompt":
-      return "미결정";
-    case "provisional":
-      return "임시 허용";
-    case "ephemeral":
-      return "일회성 허용";
-    case "unsupported":
-      return "지원 안 함";
-    default:
-      return normalized;
-  }
-}
-
 function formatQueryParams(queryParams) {
   if (!queryParams || typeof queryParams !== "object") {
     return "없음";
@@ -493,7 +437,6 @@ export function buildHumanReadablePayload(payload, docId = null) {
   const matchSignals = normalizedPayload.matchSignals ?? {};
   const publicIp = matchSignals.publicIp ?? {};
   const comparableSignals = matchSignals.comparableSignals ?? {};
-  const permissions = comparableSignals.permissions ?? {};
   const connection = comparableSignals.connection ?? {};
 
   const rawTextValue = businessParams.text ?? sourcePage.linkColor ?? null;
@@ -548,14 +491,6 @@ export function buildHumanReadablePayload(payload, docId = null) {
         { label: "온라인 상태", value: formatOnline(comparableSignals.online) },
         { label: "네트워크 정보", value: formatConnection(connection) },
         { label: "비교용 해시", value: asDisplayText(matchSignals.comparableSignalHash) }
-      ]
-    },
-    {
-      title: "권한 상태",
-      rows: [
-        { label: "위치 권한", value: formatPermission(permissions.geolocation) },
-        { label: "알림 권한", value: formatPermission(permissions.notifications) },
-        { label: "카메라 권한", value: formatPermission(permissions.camera) }
       ]
     },
     {

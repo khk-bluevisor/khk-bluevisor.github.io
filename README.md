@@ -151,7 +151,6 @@ app-ddl-link-static-page__samples/
 - 디바이스/화면: `platform`, `maxTouchPoints`, `hardwareConcurrency`, `deviceMemoryGb`
 - 화면 정보: `screenWidth`, `screenHeight`, `viewportWidth`, `viewportHeight`, `devicePixelRatio`
 - 네트워크: `online`, `connection.type`, `connection.effectiveType`, `downlinkMbps`, `rttMs`, `saveData`
-- 권한: `geolocation`, `notifications`, `camera`
 - 해시 힌트: `comparableSignalHash` (SHA-256)
 
 주의:
